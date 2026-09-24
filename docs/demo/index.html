@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A continuous 4:48 demo of Sumora investigating fraud through TigerGraph and MCP.">
+  <meta name="description" content="A 2:53 demo of Sumora investigating fraud through TigerGraph and MCP.">
   <title>Sumora — Live investigation demo</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,7 +23,7 @@
     h1 { margin: 0; font-size: clamp(31px, 4vw, 54px); line-height: 1.15; letter-spacing: -.04em; }
     .intro { margin: 18px 0 30px; max-width: 750px; color: #555; line-height: 1.6; }
     .screen { padding: 8px; background: #171717; border: 1px solid #171717; border-radius: 9px; }
-    video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #171717; }
+    .screen iframe { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; background: #171717; }
     .under { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); gap: 70px; padding-top: 35px; }
     h2 { margin: 0 0 14px; font-size: 17px; }
     p { line-height: 1.65; }
@@ -55,33 +55,37 @@
     <main>
       <p class="eyebrow">TigerGraph × HHGoa 2026 / Task 4</p>
       <h1>Fraud investigation, live.</h1>
-      <p class="intro">One continuous 4:48 browser recording. Two cases run against TigerGraph Community Edition, the official MCP tool, and a calibrated CPU decision model.</p>
+      <p class="intro">A 2:53 walkthrough of the live session. Two cases run against TigerGraph Community Edition, the official MCP tool, and a calibrated CPU decision model.</p>
       <div class="screen">
-        <video controls preload="metadata" poster="poster.jpg" playsinline aria-label="Sumora live fraud investigation demo">
-          <source src="sumora-hhgoa-demo.mp4" type="video/mp4">
-          <a href="sumora-hhgoa-demo.mp4">Download the demo video</a>.
-        </video>
+        <iframe
+          src="https://www.youtube.com/embed/-eyAHKQIo4c"
+          title="Sumora live fraud investigation demo"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen
+        ></iframe>
       </div>
       <div class="under">
         <section>
           <h2>What the recording shows</h2>
           <p>HHG-013 closes as no fraud. HHG-011 requests step-up authentication and remains open because no response has arrived. The screen shows graph links, actual MCP query parameters and returned rows, agent steps, the evidence gate, the new-data flow, and the architecture and evaluation in source.</p>
-          <p class="note">The screen recording is continuous. Its voice-over is synthesized. The historical AUC shown is measured on selected, labelled cases; challenge accuracy is unknown.</p>
+          <p class="note">One live browser session, cut to the investigation, with the voice recorded on the picture. The historical AUC is measured on selected, labelled cases. Challenge accuracy is unknown.</p>
           <div class="links">
-            <a href="sumora-hhgoa-demo.mp4">Download MP4</a>
-            <a href="demo-script.html">Narration and recording plan</a>
+            <a href="https://youtu.be/-eyAHKQIo4c">Watch on YouTube</a>
             <a href="https://github.com/devanshranjan10/sumora-hhgoa-2026/tree/main/cases">20 answer files</a>
+            <a href="https://devanshranjan10.github.io/sumora-hhgoa-2026/blog/">Technical blog</a>
           </div>
         </section>
         <section>
           <h2>Jump points</h2>
           <ol>
-            <li>0:00 — Live deployment and graph</li>
-            <li>0:55 — Legitimate case, agent and MCP</li>
-            <li>1:45 — Ambiguous case, request evidence</li>
-            <li>2:40 — Watchlist, imports, new pattern</li>
-            <li>3:22 — Runtime architecture and code</li>
-            <li>4:13 — Results and answer files</li>
+            <li>0:00 — Title</li>
+            <li>0:06 — Live console and graph</li>
+            <li>0:37 — HHG-013, nine percent, MCP receipt</li>
+            <li>1:03 — HHG-011, step-up, case stays open</li>
+            <li>1:35 — Watchlist, new rows, shared-device ring</li>
+            <li>2:04 — Architecture, LangGraph, MCP, gate</li>
+            <li>2:35 — Twenty answers and the holdout</li>
           </ol>
         </section>
       </div>
