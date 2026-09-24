@@ -1,6 +1,6 @@
-data/
-answers/
-checkpoints/
+/data/
+/answers/
+/checkpoints/
 .env
 .freebuff/
 *.part

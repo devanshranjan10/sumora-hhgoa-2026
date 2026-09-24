@@ -1,0 +1,187 @@
+{
+  "case_id": "HHG-003",
+  "steps": [
+    {
+      "step": "open_case",
+      "case_id": "HHG-003"
+    },
+    {
+      "step": "investigate",
+      "tools": [
+        "ato",
+        "card_testing",
+        "new_device_cnp",
+        "out_of_region",
+        "recurring"
+      ]
+    },
+    {
+      "step": "assess",
+      "p": 0.95,
+      "ci": [
+        0.938,
+        0.95
+      ]
+    },
+    {
+      "step": "gate",
+      "gather": false,
+      "action": "DECLINE_TRANSACTION",
+      "stop": "robust_optimal:DECLINE_TRANSACTION_for_all_p_in_ci"
+    },
+    {
+      "step": "propose",
+      "action": "DECLINE_TRANSACTION"
+    },
+    {
+      "step": "approval",
+      "route": "L1",
+      "approved": false,
+      "simulated": true
+    },
+    {
+      "step": "execute",
+      "action": "DECLINE_TRANSACTION",
+      "simulated": true
+    },
+    {
+      "step": "explain",
+      "llm": "EchoProvider"
+    },
+    {
+      "step": "update_memory",
+      "similar": 3
+    },
+    {
+      "step": "close"
+    }
+  ],
+  "tool_log": [
+    [
+      "q_evidence_pack",
+      260
+    ],
+    [
+      "q_case_structural_similarity",
+      220
+    ],
+    [
+      "q_card_testing_score",
+      180
+    ],
+    [
+      "q_new_device_cnp_score",
+      170
+    ],
+    [
+      "q_out_of_region_score",
+      170
+    ],
+    [
+      "q_ato_score",
+      170
+    ],
+    [
+      "q_recurring_entities",
+      190
+    ],
+    [
+      "q_case_feature_vector",
+      240
+    ]
+  ],
+  "mcp_calls": [
+    {
+      "tool": "tigergraph__run_installed_query",
+      "query_name": "q_case_structural_similarity",
+      "parameters": {
+        "case_id": "HHG-003",
+        "top_k": 10
+      },
+      "row_count": 1,
+      "result_preview": "[{\"similar_cases\": [], \"similar_closed_cases\": [\"CC-4758|8|0\", \"CC-2129|2|0\", \"CC-1434|2|0\", \"CC-3438|2|0\", \"CC-0591|2|0\", \"CC-3682|1596|0\", \"CC-0984|2|0\", \"CC-3327|2394|0\", \"CC-0822|4|0\", \"CC-0141|8|0\", \"CC-3088|2|0\", \"CC-2058|2|0\", \"CC-3303|2|0\", \"CC-0703|2|0\", \"CC-2935|1596|0\", \"CC-4887|2|0\", \"CC-1589|798|0\", \"CC-1399|2|0\", \"CC-4957|798|0\", \"CC-2817|798|0\", \"CC-0972|2|0\"]}]",
+      "truncated": false
+    },
+    {
+      "tool": "tigergraph__run_installed_query",
+      "query_name": "q_card_testing_score",
+      "parameters": {
+        "card_id": "C08623-K2",
+        "cutoff_dt": 13957281
+      },
+      "row_count": 1,
+      "result_preview": "[{\"card_testing_score\": 0, \"probes\": 0, \"probe_to_large_transitions\": 0, \"card_txns\": 2, \"sequenced_pairs\": 1, \"support_count\": 0, \"contradict_count\": 0}]",
+      "truncated": false
+    },
+    {
+      "tool": "tigergraph__run_installed_query",
+      "query_name": "q_new_device_cnp_score",
+      "parameters": {
+        "txn_id": "3530164"
+      },
+      "row_count": 1,
+      "result_preview": "[{\"new_device_cnp_score\": 0, \"w_device_novel\": 0, \"w_device_shared\": 0, \"w_email_mismatch\": 0, \"w_amount_outlier\": 0, \"prior_txns_same_device\": 0, \"support_count\": 1, \"contradict_count\": 0}]",
+      "truncated": false
+    },
+    {
+      "tool": "tigergraph__run_installed_query",
+      "query_name": "q_out_of_region_score",
+      "parameters": {
+        "txn_id": "3530164"
+      },
+      "row_count": 1,
+      "result_preview": "[{\"out_of_region_score\": 0.3, \"w_region_new\": 0, \"w_region_flip\": 0, \"w_card_present\": 0.3, \"prior_txns_in_region\": 42, \"days_since_prev_txn\": 0.0337963, \"support_count\": 42, \"contradict_count\": 42}]",
+      "truncated": false
+    },
+    {
+      "tool": "tigergraph__run_installed_query",
+      "query_name": "q_ato_score",
+      "parameters": {
+        "customer_id": "C08623"
+      },
+      "row_count": 1,
+      "result_preview": "[{\"ato_score\": 0.664, \"w_device_novel\": 0, \"w_match_mismatch\": 0.2, \"w_velocity_burst\": 0.3, \"w_shared_fraud\": 0.4, \"n_cards\": 2, \"max_txns_one_day\": 19, \"support_count\": 155, \"contradict_count\": 0}]",
+      "truncated": false
+    }
+  ],
+  "p_final": 0.95,
+  "p_initial": 0.95,
+  "evsi_table": {
+    "customer_validation": -2.98,
+    "step_up_auth": -3.98,
+    "analyst_info": -8.98
+  },
+  "stop_reason": "robust_optimal:DECLINE_TRANSACTION_for_all_p_in_ci",
+  "evidence": [
+    {
+      "claim": "Flagged transaction T3530164 ($49.00, card-present)",
+      "source": "graph",
+      "ref": "q_evidence_pack",
+      "entity_ids": [
+        "T3530164"
+      ]
+    },
+    {
+      "claim": "Device/structure links prior case(s) CC-3327, CC-2935, CC-3682",
+      "source": "graph",
+      "ref": "q_case_structural_similarity",
+      "entity_ids": [
+        "CC-3327",
+        "CC-2935",
+        "CC-3682"
+      ]
+    },
+    {
+      "claim": "Policy check (data/HHGOA_IEEE/README.md#Fraud Policy): # Fraud Policy\n\nVersion 1.0. This is the policy your agent operates under. Action names and approval routes in your case files must use the exact identifiers be",
+      "source": "document",
+      "ref": "graphrag.retrieve",
+      "entity_ids": []
+    }
+  ],
+  "requests": [],
+  "similar_prior_cases": [
+    "CC-3327",
+    "CC-2935",
+    "CC-3682"
+  ]
+}

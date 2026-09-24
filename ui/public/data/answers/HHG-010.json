@@ -1,0 +1,103 @@
+{
+  "case": {
+    "affected_txn_ids": [
+      "T3506725"
+    ],
+    "connected_card_ids": [],
+    "connected_device_profiles": [
+      "Windows | Windows 10 | edge 16.0 | 1366x768"
+    ],
+    "evidence": [
+      {
+        "claim": "Flagged transaction T3506725 ($1000.03, online)",
+        "entity_ids": [
+          "T3506725"
+        ],
+        "ref": "q_evidence_pack",
+        "source": "graph"
+      },
+      {
+        "claim": "Device/structure links prior case(s) CC-3528, CC-0873, CC-3221",
+        "entity_ids": [
+          "CC-3528",
+          "CC-0873",
+          "CC-3221"
+        ],
+        "ref": "q_case_structural_similarity",
+        "source": "graph"
+      },
+      {
+        "claim": "Policy check (data/HHGOA_IEEE/README.md#Fraud Policy): # Fraud Policy\n\nVersion 1.0. This is the policy your agent operates under. Action names and approval routes in your case files must use the exact identifiers be",
+        "entity_ids": [],
+        "ref": "graphrag.retrieve",
+        "source": "document"
+      }
+    ],
+    "exposure_usd": 1000.03,
+    "first_suspicious_txn_id": "T3506725",
+    "fraud_probability": 0.5,
+    "graph_case_id": "HHG-010",
+    "pattern": "card_not_present_new_device",
+    "pattern_description": "",
+    "similar_prior_cases": [
+      "CC-3528",
+      "CC-0873",
+      "CC-3221"
+    ],
+    "status": "escalated",
+    "summary": "Trigger: risk score on transaction T3506725 ($1000.03, card C10434-K1). Findings: p=0.50 (90% CI 0.39-0.60), 3 evidence items. Pattern: card_not_present_new_device. Stopping: decline transaction remains cost-optimal for every p in the 90% CI, so extra evidence cannot flip the decision. Actions: DECLINE_TRANSACTION -> MONITOR_CARD -> ESCALATE_TO_ANALYST; approval in-line. Memory: 3 closed prior case(s) cited.",
+    "verdict": "uncertain",
+    "written_to_graph": true
+  },
+  "case_id": "HHG-010",
+  "evidence_requests": [],
+  "latency_s": 15.694,
+  "next_best_actions": {
+    "final": [
+      {
+        "action": "DECLINE_TRANSACTION",
+        "reason": "decision gate selected DECLINE_TRANSACTION as the minimum expected-cost action",
+        "route": "L1"
+      },
+      {
+        "action": "MONITOR_CARD",
+        "reason": "inconclusive within the response window; heightened monitoring",
+        "route": "auto"
+      },
+      {
+        "action": "ESCALATE_TO_ANALYST",
+        "reason": "R8: uncertain verdict with exposure $1000.03 > $500",
+        "route": "auto"
+      }
+    ],
+    "initial": [
+      {
+        "action": "DECLINE_TRANSACTION",
+        "reason": "decision gate selected DECLINE_TRANSACTION as the minimum expected-cost action",
+        "route": "L1"
+      },
+      {
+        "action": "MONITOR_CARD",
+        "reason": "inconclusive within the response window; heightened monitoring",
+        "route": "auto"
+      },
+      {
+        "action": "ESCALATE_TO_ANALYST",
+        "reason": "R8: uncertain verdict with exposure $1000.03 > $500",
+        "route": "auto"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "activity_dates": [],
+    "file": false,
+    "narrative": "",
+    "reason": "3a: filing threshold not met; case only, no report",
+    "subjects": [],
+    "total_amount_usd": 0
+  },
+  "stop_reason": "robust_optimal:DECLINE_TRANSACTION_for_all_p_in_ci",
+  "tokens": 1800,
+  "tool_calls": 9
+}

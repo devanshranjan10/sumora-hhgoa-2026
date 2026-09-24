@@ -21,6 +21,10 @@ const title = (value: string) => value.replace(/_/g, ' ').toLowerCase().replace(
 const money = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
 
 function stopHuman(reason: string): { title: string; detail: string } {
+  if (reason.startsWith('awaiting_evidence_response:')) return {
+    title: 'Awaiting step-up authentication',
+    detail: 'The request has positive expected value. The case stays open and uncertain until a real response arrives.',
+  }
   if (reason.startsWith('evsi_le_0')) return {
     title: 'More evidence would not change the decision',
     detail: 'The expected value of another request is zero or lower after its cost and delay.',
@@ -33,10 +37,14 @@ function stopHuman(reason: string): { title: string; detail: string } {
     title: 'Independent signals agree',
     detail: 'The probability is outside the ambiguous band and two evidence classes support the route.',
   }
+  if (reason.startsWith('confident_p:')) return {
+    title: 'Evidence supports a clear decision',
+    detail: 'The estimated probability is outside the ambiguous band and at least two evidence classes were reviewed.',
+  }
   return { title: title(reason), detail: '' }
 }
 
-function describeStep(step: TraceStep) {
+function describeStep(step: TraceStep, pending = false) {
   if (step.step === 'investigate') return `Queried ${((step.tools as string[]) ?? []).map(title).join(', ')}.`
   if (step.step === 'assess') return `Estimated p=${step.p} with 90% CI ${((step.ci as number[]) ?? []).join('–')}.`
   if (step.step === 'gate') return step.gather ? `Requested ${title(String(step.action))} because further evidence had value.` : `Selected ${title(String(step.action))}; ${String(step.stop ?? 'no further evidence required').replace(/_/g, ' ')}.`
@@ -46,7 +54,7 @@ function describeStep(step: TraceStep) {
   if (step.step === 'update_memory') return 'Updated graph case memory.'
   if (step.step === 'explain') return 'Prepared evidence-backed explanation.'
   if (step.step === 'open_case') return 'Opened the case and its graph context.'
-  if (step.step === 'close') return 'Completed the investigation.'
+  if (step.step === 'close') return pending ? 'Paused the open case for the requested evidence.' : 'Completed the investigation.'
   return title(step.step)
 }
 
@@ -66,10 +74,11 @@ function ActionList({ actions, empty }: { actions: Action[]; empty?: string }) {
 }
 
 function TraceTimeline({ trace, playing, stepCount }: { trace: Trace; playing: boolean; stepCount: number }) {
+  const pending = trace.stop_reason.startsWith('awaiting_evidence_response:')
   return <div className="timeline">{trace.steps.map((step, index) => (
     <div key={`${step.step}-${index}`} className={`timeline-row ${playing && index >= stepCount ? 'waiting' : ''}`}>
       <span className="timeline-marker">{String(index + 1).padStart(2, '0')}</span>
-      <div><strong>{title(step.step)}</strong><p>{describeStep(step)}</p></div>
+      <div><strong>{title(step.step)}</strong><p>{describeStep(step, pending)}</p></div>
     </div>
   ))}</div>
 }
@@ -79,7 +88,7 @@ function McpEvidence({ trace }: { trace: Trace }) {
   if (!calls.length) return null
   return <section className="mcp-evidence" aria-label="TigerGraph MCP query results">
     <div className="mcp-evidence-heading"><span className="eyebrow">TIGERGRAPH MCP · CAPTURED RESPONSE</span><h4>Installed query results</h4><p>Actual rows returned to the agent by the MCP tool during this run.</p></div>
-    {calls.map((call, index) => <details key={`${call.query_name}-${index}`} open={index === 0}>
+    {calls.map((call, index) => <details key={`${call.query_name}-${index}`} open={call.query_name === 'q_new_device_cnp_score' || (index === 0 && !calls.some(item => item.query_name === 'q_new_device_cnp_score'))}>
       <summary><code>{call.query_name}</code><span>{call.row_count} {call.row_count === 1 ? 'row' : 'rows'}</span></summary>
       <div className="mcp-evidence-body"><small>Tool</small><code>{call.tool}</code><small>Parameters</small><pre>{JSON.stringify(call.parameters, null, 2)}</pre><small>Result {call.truncated ? '(preview)' : ''}</small><pre>{call.result_preview}</pre></div>
     </details>)}
@@ -294,7 +303,7 @@ export default function App() {
 
         {view === 'overview' && <div className="overview-grid">
           <section className="surface actions-surface"><div className="section-heading"><div><span className="eyebrow">Decision</span><h3>Recommended response</h3></div><span className="section-meta">FINAL ACTIONS</span></div><ActionList actions={answer?.next_best_actions.final ?? []} empty="Loading recommendations…" /><div className="surface-footer"><span className="footer-icon">i</span>{evidenceRequests.length ? `${evidenceRequests.length} evidence request${evidenceRequests.length === 1 ? '' : 's'} · recommendation ${changed ? 'changed' : 'confirmed'}` : 'No additional evidence was requested'}</div></section>
-          <section className="surface rationale-surface"><div className="section-heading"><div><span className="eyebrow">Decision logic</span><h3>Why the agent stopped</h3></div></div><div className="rationale-symbol">✓</div><h4>{stop?.title ?? 'Loading decision logic…'}</h4><p>{stop?.detail ?? ''}</p><span className="rationale-code">{answer?.tool_calls ?? '—'} tool calls <span>·</span> {answer?.tokens ?? '—'} tokens</span></section>
+          <section className="surface rationale-surface"><div className="section-heading"><div><span className="eyebrow">Decision logic</span><h3>Why the agent stopped</h3></div></div><div className="rationale-symbol">{answer?.stop_reason.startsWith('awaiting_evidence_response:') ? '…' : '✓'}</div><h4>{stop?.title ?? 'Loading decision logic…'}</h4><p>{stop?.detail ?? ''}</p><span className="rationale-code">{answer?.tool_calls ?? '—'} tool calls <span>·</span> {answer?.tokens ?? '—'} tokens</span></section>
           <section className="surface evidence-surface"><div className="section-heading"><div><span className="eyebrow">Graph context</span><h3>Evidence at a glance</h3></div><button className="text-button" onClick={() => setView('evidence')}>View all evidence <span aria-hidden="true">↗</span></button></div><div className="evidence-preview">{evidence.filter(item => item.source === 'graph').slice(0, 2).map((item, index) => <div className="evidence-preview-row" key={`${item.ref}-${index}`}><span className="evidence-icon">{index + 1}</span><div><strong>{item.claim}</strong><small>{item.ref}</small></div></div>)}{!evidence.length && <p className="empty-copy">Loading evidence…</p>}</div></section>
           <section className="surface facts-surface"><div className="section-heading"><div><span className="eyebrow">Case profile</span><h3>At a glance</h3></div></div><div className="fact-row"><span>Exposure</span><strong>{answer ? money(answer.case.exposure_usd) : '—'}</strong></div><div className="fact-row"><span>Transactions</span><strong>{txnCount}</strong></div><div className="fact-row"><span>Prior cases cited</span><strong>{priorCount}</strong></div><div className="fact-row"><span>SAR recommendation</span><strong>{answer ? answer.sar.file ? 'Prepare report' : 'No report' : '—'}</strong></div></section>
           <section className="surface sar-surface"><div className="section-heading"><div><span className="eyebrow">Reporting</span><h3>Suspicious activity report</h3></div><span className={`report-pill ${answer?.sar.file ? 'report-yes' : ''}`}>{answer?.sar.file ? 'PREPARE' : 'NOT RECOMMENDED'}</span></div><p>{answer?.sar.reason ?? 'Loading reporting recommendation…'}</p>{answer?.sar.file && <><p className="body-copy">{answer.sar.narrative}</p><div className="sar-total">{money(answer.sar.total_amount_usd)} <span>across {answer.sar.subjects.length} subject{answer.sar.subjects.length === 1 ? '' : 's'}</span></div></>}</section>

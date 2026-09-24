@@ -1,0 +1,187 @@
+{
+  "case_id": "HHG-007",
+  "steps": [
+    {
+      "step": "open_case",
+      "case_id": "HHG-007"
+    },
+    {
+      "step": "investigate",
+      "tools": [
+        "ato",
+        "card_testing",
+        "new_device_cnp",
+        "out_of_region",
+        "recurring"
+      ]
+    },
+    {
+      "step": "assess",
+      "p": 0.95,
+      "ci": [
+        0.935,
+        0.95
+      ]
+    },
+    {
+      "step": "gate",
+      "gather": false,
+      "action": "DECLINE_TRANSACTION",
+      "stop": "robust_optimal:DECLINE_TRANSACTION_for_all_p_in_ci"
+    },
+    {
+      "step": "propose",
+      "action": "DECLINE_TRANSACTION"
+    },
+    {
+      "step": "approval",
+      "route": "L1",
+      "approved": false,
+      "simulated": true
+    },
+    {
+      "step": "execute",
+      "action": "DECLINE_TRANSACTION",
+      "simulated": true
+    },
+    {
+      "step": "explain",
+      "llm": "EchoProvider"
+    },
+    {
+      "step": "update_memory",
+      "similar": 3
+    },
+    {
+      "step": "close"
+    }
+  ],
+  "tool_log": [
+    [
+      "q_evidence_pack",
+      260
+    ],
+    [
+      "q_case_structural_similarity",
+      220
+    ],
+    [
+      "q_card_testing_score",
+      180
+    ],
+    [
+      "q_new_device_cnp_score",
+      170
+    ],
+    [
+      "q_out_of_region_score",
+      170
+    ],
+    [
+      "q_ato_score",
+      170
+    ],
+    [
+      "q_recurring_entities",
+      190
+    ],
+    [
+      "q_case_feature_vector",
+      240
+    ]
+  ],
+  "mcp_calls": [
+    {
+      "tool": "tigergraph__run_installed_query",
+      "query_name": "q_case_structural_similarity",
+      "parameters": {
+        "case_id": "HHG-007",
+        "top_k": 10
+      },
+      "row_count": 1,
+      "result_preview": "[{\"similar_cases\": [\"HHG-013|2|0\", \"HHG-902|2|0\", \"HHG-011|2|0\", \"HHG-012|2|0\", \"HHG-006|2|0\"], \"similar_closed_cases\": [\"CC-2560|4|0\", \"CC-1241|2|0\", \"CC-4984|4|0\", \"CC-5179|2|0\", \"CC-0916|6|0\", \"CC-5426|4|0\", \"CC-4821|4|0\", \"CC-2961|14|0\", \"CC-0094|2|0\", \"CC-0240|4|0\", \"CC-2102|2|0\", \"CC-2262|2|0\", \"CC-4775|2|0\", \"CC-1039|2|0\", \"CC-3926|2|0\", \"CC-2724|4|0\", \"CC-3269|2|0\", \"CC-2799|4|0\", \"CC-3917|2|0\", \"CC-0855|2|0\", \"CC-2691|4|0\", \"CC-0453|4|0\", \"CC-0288|4|0\", \"CC-2920|2|0\", \"CC-3388|2|0\", \"CC-3762|2|0\", \"CC-1192|2|0\", \"CC-4340|20|0\", \"CC-5565|2|0\", \"CC-5330|4|0\", \"CC-3235|2|0\", \"CC-5233|26|0\", \"CC-5525|2|0\", \"CC-1215|2|0\", \"CC-3759|2|0\", \"CC-0335|2|0\", \"CC-2127|2|0\", \"CC-0655|4|0\", \"CC-0467|8|0\", \"CC-0603|2|0\", \"CC-1790|2|0\", \"CC-3707|4|0\", \"CC-1389|2|0\", \"CC-0166|2|0\", \"CC-2807|6|0\", \"CC-2220|4|0\", \"CC-2098|2|0\", \"CC-1119|2|0\", \"CC-1290|2|0\", \"CC-1968|2|0\", \"CC-1930|44|0\", \"CC-1066|2|0\", \"CC-2069|20|0\", \"CC-1292|2|0\", \"CC-1881|2|0\", \"CC-5220|2|0\", \"CC-2685|2|0\", \"CC-3656|2|0\", \"CC-2071|2|0\", \"CC-2427|2|0\", \"CC-5307|2|0\", \"CC-3879|2|0\", \"CC-1336|2|0\", \"CC-2953|2|0\", \"CC-5088|2|0\", \"CC-2032|2|0\", \"CC-4066|26|0\", \"CC-3680|2|0\", \"CC-4073|2|0\", \"CC-5523|2|0\", \"CC-4121|2|0\", \"CC-3864|6|0\", \"CC-4163|14|0\", \"CC-3572|2|0\", \"CC-4299|10|0\", \"CC-0955|2|0\", \"CC-2984|4|0\", \"CC-1669|6|0\", \"CC-4271|2|0\", \"CC-3062|2|0\", \"CC-1973|6|0\", \"CC-2429|2|0\", \"CC-3940|2|0\", \"CC-2103|2|0\", \"CC-1800|2|0\", \"CC-1007|2|0\", \"CC-2329|2|0\", \"CC-4861|6|0\", \"CC-0644|2|0\", \"CC-2447|2|0\", \"CC-3083|10|0\", \"CC-4612|2|0\", \"CC-4898|2|0\", \"CC-1540|4|0\", \"CC-1538|2|0\", \"CC-1148|2|0\", \"CC-4440|2|0\", \"CC-1005|2|0\", \"CC-2565|1820|0\", \"CC-5344|2|0\", \"CC-3932|2|0\", \"CC-3809|2|0\", \"CC-4072|18|0\", \"CC-5296|2|0\", \"CC-4156|6|0\", \"CC-3645|2|0\", \"CC-4060|2|0\", \"CC-4223|2|0\", \"CC-0097|2|0\", \"CC-1676|2|0\", \"CC-3319|10|0\", \"CC-0694|4|0\", \"CC-3326|12|0\", \"CC-0668|4|0\", \"CC-1569|6|0\", \"CC-0133|2|0\", \"CC-0345|2|0\", \"CC-2996|8|0\", \"CC-0128|2|0\", \"CC-1507|22|0\", \"CC-4463|6|0\", \"CC-0820|4|0\", \"CC-2174|2|0\", \"CC-1947|2|0\", \"CC-5029|16|0\", \"CC-1146|2|0\", \"CC-5112|8|0\", \"CC-0205|2|0\", \"CC-0446|2|0\", \"CC-5317|4|0\", \"CC-3173|2|0\", \"CC-1385|8|0\", \"CC-3249|2|0\", \"CC-3578|8|0\", \"CC-3653|12|0\", \"CC-3408|6|0\", \"CC-3155|8|0\", \"CC-3944|2|0\", \"CC-2934|2|0\", \"CC-2506|2|0\", \"CC-1871|6|0\", \"CC-2862|6|0\", \"CC-0277|2|0\", \"CC-2730|2|0\", \"CC-4837|2|0\", \"CC-2473|2|0\", \"CC-5545|2|0\", \"CC-3847|14|0\", \"CC-3904|2|0\", \"CC-0012|2|0\", \"CC-2244|2|0\", \"CC-3550|2|0\", \"CC-3657|6|0\", \"CC-5415|2|0\", \"CC-2983|2|0\", \"CC-2437|28|0\", \"CC-4208|2|0\", \"CC-0431|2|0\", \"CC-4927|4|0\", \"CC-3817|2|0\", \"CC-4041|4|0\", \"CC-5395|2|0\", \"CC-4485|4|0\", \"CC-5165|2|0\", \"CC-2746|2|0\", \"CC-5130|2|0\", \"CC-5028|2|0\", \"CC-1398|2|0\", \"CC-3814|2|0\", \"CC-4700|2|0\", \"CC-5559|2|0\", \"CC-3750|6|0\", \"CC-5084|6|0\", \"CC-0250|4|0\", \"CC-5188|2|0\", \"CC-2345|4|0\", \"CC-4876|4|0\", \"CC-2465|4|0\", \"CC-0893|2|0\", \"CC-2075|2|0\", \"CC-1086|2|0\", \"CC-5227|2|0\", \"CC-1495|10|0\", \"CC-3595|2|0\", \"CC-2973|2|0\", \"CC-5043|2|0\", \"CC-3478|2|0\", \"CC-1944|2|0\", \"CC-3510|2|0\", \"CC-1171|2|0\", \"CC-1583|14|0\", \"CC-3183|6|0\", \"CC-1904|2|0\", \"CC-4218|6|0\", \"CC-0304|2|0\", \"CC-2426|4|0\", \"CC-2785|4|0\", \"CC-5118|4|0\", \"CC-3386|4|0\", \"CC-4725|2|0\", \"CC-4475|2|0\", \"CC-3962|2|0\", \"CC-2812|26|0\", \"CC-5369|6|0\", \"CC-4140|4|0\", \"CC-2948|8|0\", \"CC-4401|2|0\", \"CC-2779|2|0\", \"CC-5194|2|0\", \"CC-3936|2|0\", \"CC-4718|2|0\", \"CC-1949|8|0\", \"CC-4276|2|0\", \"CC-0281|2|0\", \"CC-3887|4|0\", \"CC-2352|2|0\", \"CC-1341|2|0\", \"CC-4906|6|0\", \"CC-2557|4|0\", \"CC-5358|6|0\", \"CC-0872|2|0\", \"CC-1978|2|0\", \"CC-5143|2|0\", \"CC-2538|4|0\", \"CC-2192|2|0\", \"CC-2647|2|0\", \"CC-1120|2|0\", \"CC-5439|4|0\", \"CC-3502|2|0\", \"CC-1152|2|0\", \"CC-0464|4|0\", \"CC-1740|2|0\", \"CC-4858|2|0\", \"CC-4929|2|0\", \"CC-5048|4|0\", \"CC-2036|2|0\", \"CC-2790|2|0\", \"CC-0190|2|0\", \"CC-5076|2|0\", \"CC-4826|18|0\", \"CC-3639|2|0\", \"CC-1486|2|0\", \"CC-2846|2|0\", \"CC-2906|2|0\", \"CC-2930|2|0\", \"CC-4294|4|0\", \"CC-0942|2|0\", \"CC-2229|12|0\", \"CC-0364|2|0\", \"CC-2404|2|0\", \"CC-1861|2|0\", \"CC-5216|4|0\", \"CC-0244|2|0\", \"CC-4292|2|0\", \"CC-0806|12|0\", \"CC-4880|4|0\", \"CC-4010|2|0\"",
+      "truncated": true
+    },
+    {
+      "tool": "tigergraph__run_installed_query",
+      "query_name": "q_card_testing_score",
+      "parameters": {
+        "card_id": "C09933-K2",
+        "cutoff_dt": 13481174
+      },
+      "row_count": 1,
+      "result_preview": "[{\"card_testing_score\": 0, \"probes\": 0, \"probe_to_large_transitions\": 0, \"card_txns\": 1, \"sequenced_pairs\": 0, \"support_count\": 0, \"contradict_count\": 0}]",
+      "truncated": false
+    },
+    {
+      "tool": "tigergraph__run_installed_query",
+      "query_name": "q_new_device_cnp_score",
+      "parameters": {
+        "txn_id": "3514948"
+      },
+      "row_count": 1,
+      "result_preview": "[{\"new_device_cnp_score\": 0, \"w_device_novel\": 0, \"w_device_shared\": 0, \"w_email_mismatch\": 0, \"w_amount_outlier\": 0, \"prior_txns_same_device\": 0, \"support_count\": 1, \"contradict_count\": 0}]",
+      "truncated": false
+    },
+    {
+      "tool": "tigergraph__run_installed_query",
+      "query_name": "q_out_of_region_score",
+      "parameters": {
+        "txn_id": "3514948"
+      },
+      "row_count": 1,
+      "result_preview": "[{\"out_of_region_score\": 0.3, \"w_region_new\": 0, \"w_region_flip\": 0, \"w_card_present\": 0.3, \"prior_txns_in_region\": 2220, \"days_since_prev_txn\": 0.08724537, \"support_count\": 2220, \"contradict_count\": 2220}]",
+      "truncated": false
+    },
+    {
+      "tool": "tigergraph__run_installed_query",
+      "query_name": "q_ato_score",
+      "parameters": {
+        "customer_id": "C09933"
+      },
+      "row_count": 1,
+      "result_preview": "[{\"ato_score\": 0.748, \"w_device_novel\": 0.25, \"w_match_mismatch\": 0.2, \"w_velocity_burst\": 0.3, \"w_shared_fraud\": 0.4, \"n_cards\": 2, \"max_txns_one_day\": 35, \"support_count\": 368, \"contradict_count\": 0}]",
+      "truncated": false
+    }
+  ],
+  "p_final": 0.95,
+  "p_initial": 0.95,
+  "evsi_table": {
+    "customer_validation": -4.24,
+    "step_up_auth": -5.24,
+    "analyst_info": -10.24
+  },
+  "stop_reason": "robust_optimal:DECLINE_TRANSACTION_for_all_p_in_ci",
+  "evidence": [
+    {
+      "claim": "Flagged transaction T3514948 ($111.92, card-present)",
+      "source": "graph",
+      "ref": "q_evidence_pack",
+      "entity_ids": [
+        "T3514948"
+      ]
+    },
+    {
+      "claim": "Device/structure links prior case(s) CC-1524, CC-0765, CC-1228",
+      "source": "graph",
+      "ref": "q_case_structural_similarity",
+      "entity_ids": [
+        "CC-1524",
+        "CC-0765",
+        "CC-1228"
+      ]
+    },
+    {
+      "claim": "Policy check (data/HHGOA_IEEE/README.md#Fraud Policy): # Fraud Policy\n\nVersion 1.0. This is the policy your agent operates under. Action names and approval routes in your case files must use the exact identifiers be",
+      "source": "document",
+      "ref": "graphrag.retrieve",
+      "entity_ids": []
+    }
+  ],
+  "requests": [],
+  "similar_prior_cases": [
+    "CC-1524",
+    "CC-0765",
+    "CC-1228"
+  ]
+}
