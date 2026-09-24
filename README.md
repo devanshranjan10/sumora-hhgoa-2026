@@ -6,6 +6,10 @@ graph, quantifies its own uncertainty, decides when to gather more evidence vs a
 recommends next-best actions under a bank policy, and writes cases + memory back into
 the graph.
 
+[Watch the live demo](https://devanshranjan10.github.io/sumora-hhgoa-2026/demo/) ·
+[Open the investigator](http://34.66.141.236/) ·
+[Read the technical blog](https://devanshranjan10.github.io/sumora-hhgoa-2026/blog/)
+
 ## Architecture
 
 ```
