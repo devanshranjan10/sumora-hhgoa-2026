@@ -7,6 +7,9 @@ title: Sumora technical blog
 
 *Sumora's submission for the TigerGraph Agentic Fraud Investigation task at Hacker House Goa.*
 
+[Public code and 20 answer files](https://github.com/devanshranjan10/sumora-hhgoa-2026) ·
+[Live investigator](http://34.66.141.236/)
+
 Fraud alerts need evidence before a card is blocked. Sumora joins payment history,
 device profiles, closed investigations, and bank policy in TigerGraph Community
 Edition. Its LangGraph agent records each tool call, estimates a fraud probability,
@@ -103,11 +106,12 @@ investigations are stored apart from `cases/`.
 
 ## The model artifact
 
-Qwen3-14B, QLoRA-fine-tuned on teacher traces, is included as an experiment. A
+Qwen3-14B, QLoRA-fine-tuned on teacher traces, is documented as an experiment. A
 strict replay of its saved raw replies fails the full answer contract because the
 corpus leaked outcome metadata, dropped action lists, and used a different chat
 serialization at training time. The calibrated graph loop remains the decision
-maker. We keep the artifact and its audit report so the limitation is reproducible.
+maker. We keep the audit report and sample replies; the large weights are not
+in the repository.
 
 ## Rules you can execute
 
