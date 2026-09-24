@@ -11,7 +11,8 @@ may be shared by unrelated people; this is an alert queue, not ground truth.
 The first alert, `T3425188`, had a bank risk score of 0.08 and was opened as
 `HHG-902` through the live dashboard. Its graph case was written to TigerGraph.
 `HHG-902.json` and `HHG-902.trace.json` are the resulting answer and
-agent audit trail. The model estimate is **not** an observed fraud label;
+agent audit trail, including five captured TigerGraph MCP query responses.
+The model estimate is **not** an observed fraud label;
 the recorded actions are recommendations with human approval routes.
 
 Reproduce the watchlist locally after preparing the challenge data:

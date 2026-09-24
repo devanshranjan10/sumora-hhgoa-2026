@@ -88,7 +88,7 @@
   },
   "case_id": "HHG-902",
   "evidence_requests": [],
-  "latency_s": 8.39,
+  "latency_s": 9.462,
   "next_best_actions": {
     "final": [
       {
