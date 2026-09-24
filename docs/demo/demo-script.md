@@ -43,6 +43,22 @@ After recording, upload the video with **Anyone with the link** access. Open
 the exact URL in a private browser window before putting it in the form. Do
 not edit `cases/` after the final form submission.
 
+## Reproduce the hosted capture
+
+The hosted video was recorded as one continuous Playwright browser session by
+[`record_demo.cjs`](record_demo.cjs), then given a timed synthesized voice-over
+by [`mix_voiceover.py`](mix_voiceover.py). On macOS with Google Chrome, `say`,
+FFmpeg, Node, and NumPy installed:
+
+```bash
+npm install --prefix /tmp/sumora-video playwright-core
+caffeinate -dims env NODE_PATH=/tmp/sumora-video/node_modules SUMORA_VIDEO_OUT=/tmp/sumora-video/take2 node docs/demo/record_demo.cjs
+SUMORA_VIDEO_OUT=/tmp/sumora-video/take2 python3 docs/demo/mix_voiceover.py
+```
+
+The mixer rejects recordings outside 3–5 minutes and narration that exceeds
+the recording. Review the local MP4 before publishing it.
+
 ## Numbers to keep accurate
 
 | Claim | Verified value | What it means |

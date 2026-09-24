@@ -29,6 +29,8 @@ def main() -> None:
             "-of", "default=nw=1:nk=1", str(OUT / "continuous.webm"),
         )
     )
+    if not 180 <= duration <= 300:
+        raise RuntimeError(f"Recording must be 3–5 minutes; got {duration:.1f}s")
     samples = np.zeros(round(duration * RATE), dtype=np.float32)
     previous_end = 0.0
 
@@ -47,6 +49,8 @@ def main() -> None:
         start = max(cue["atMs"] / 1000 + 0.4, previous_end + 0.2)
         end = start + len(clip) / RATE
         print(f"{name}: {start:.1f}–{end:.1f}s / scene cue {cue['atMs'] / 1000:.1f}s", flush=True)
+        if end > duration:
+            raise RuntimeError(f"Voice cue {name} ends after video ({end:.1f}s > {duration:.1f}s)")
         begin = round(start * RATE)
         if begin >= len(samples):
             raise RuntimeError(f"Voice cue {name} falls after video")
