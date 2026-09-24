@@ -93,25 +93,19 @@ The replacement drops the bank risk score from the features and trains only wher
 
 September selection keeps sigmoid calibration for the rich model: class-balanced Brier 0.068 versus 0.072 for isotonic. The six-feature fallback keeps isotonic: 0.180 versus 0.194. Scikit-learn's calibration notes say isotonic regression overfits well below 1,000 calibration samples, which is why the two maps are compared on a later slice instead of trusted by default. Because the calibration set has only 125 cases, live probabilities are clipped:
 
-$$
-p \leftarrow \mathrm{clip}(p,\, 0.05,\, 0.95)
-$$
+<div class="tex-block">p \leftarrow \mathrm{clip}(p,\, 0.05,\, 0.95)</div>
 
 The interval around `p` is resampling variability of that calibrator. It is not an interval over the missing challenge labels.
 
 ### Features
 
-The account vector is computed only from transactions strictly before the flagged timestamp. Bank risk is feature index 5 and is removed before either model sees the row. The remaining six are the fallback model: small-auth rate, amount z-score, online flag, device novelty, night transaction (00:00–05:00), and the memory contrast. Amount z-scores are clipped to \([-5, 15]\).
+The account vector is computed only from transactions strictly before the flagged timestamp. Bank risk is feature index 5 and is removed before either model sees the row. The remaining six are the fallback model: small-auth rate, amount z-score, online flag, device novelty, night transaction (00:00–05:00), and the memory contrast. Amount z-scores are clipped to <span class="tex">[-5, 15]</span>.
 
-$$
-z = \frac{|a_t| - \bar a_{<t}}{s_{<t}}
-$$
+<div class="tex-block">z = \frac{|a_t| - \bar a_{&lt;t}}{s_{&lt;t}}</div>
 
-$$
-m = \mathrm{clip}\!\left(\frac{n_f - n_c}{\sqrt{n_f + n_c + 1}},\, -3,\, 3\right)
-$$
+<div class="tex-block">m = \mathrm{clip}\!\left(\frac{n_f - n_c}{\sqrt{n_f + n_c + 1}},\, -3,\, 3\right)</div>
 
-\(n_f\) and \(n_c\) count bank-confirmed fraud and cleared cases that share this device and closed before this transaction. The square root stops a busy device from dominating just because it has more cases. Raw counts rise together inside a dense cluster. The contrast asks which outcome dominates.
+<span class="tex">n_f</span> and <span class="tex">n_c</span> count bank-confirmed fraud and cleared cases that share this device and closed before this transaction. The square root stops a busy device from dominating just because it has more cases. Raw counts rise together inside a dense cluster. The contrast asks which outcome dominates.
 
 The rich model stacks those six fields with raw transaction and identity columns: amount, `dist1`, `dist2`, `C1`–`C14`, `D1`–`D15`, 30 selected `V` columns, numeric `id_01`, `id_02`, `id_05`, `id_06`, `id_11`, and one-hot encodings of `ProductCD`, `card4`, `card6`, `M1`–`M9`, `id_15`, `id_23`, and `DeviceType` (`min_frequency` 10). Missing numeric source fields stay missing. They are not filled with zero. The fitted matrix has 122 columns. Both boosters use 150 iterations, at most 15 leaves, a minimum leaf of 30 samples, L2 regularization 10, learning rate 0.05, balanced class weights, and seed 42.
 
@@ -121,13 +115,9 @@ New uploads do not carry those raw columns. They use the six-feature fallback an
 
 AUC is the ranking of the uncalibrated booster score. Class-balanced Brier is computed on the clipped calibrated probability. Each class is given half the total weight, so the 900 cleared cases are not drowned by the 4,665 fraud cases:
 
-$$
-w_i = n \cdot \frac{0.5}{n_{y_i}}
-$$
+<div class="tex-block">w_i = n \cdot \frac{0.5}{n_{y_i}}</div>
 
-$$
-\mathrm{Brier}_w = \frac{\sum_i w_i (p_i - y_i)^2}{\sum_i w_i}
-$$
+<div class="tex-block">\mathrm{Brier}_w = \frac{\sum_i w_i (p_i - y_i)^2}{\sum_i w_i}</div>
 
 | Model | October AUC | Class-balanced Brier | Calibration |
 |---|---:|---:|---|
@@ -164,46 +154,38 @@ The overlap check removes one obvious failure mode. It does not create legitimat
 
 ## Expected cost, then the value of looking
 
-The gate never asks a language model which action is cheaper. For exposure \(E\) and action \(a\):
+The gate never asks a language model which action is cheaper. For exposure <span class="tex">E</span> and action <span class="tex">a</span>:
 
-$$
-EC(a) = p\, C(a \mid \mathrm{fraud}) + (1-p)\, C(a \mid \mathrm{legit})
-$$
+<div class="tex-block">EC(a) = p\, C(a \mid \mathrm{fraud}) + (1-p)\, C(a \mid \mathrm{legit})</div>
 
-$$
-a^\* = \arg\min_a EC(a)
-$$
+<div class="tex-block">a^{*} = \arg\min_a EC(a)</div>
 
 The costs in `agent/policy.yaml` are:
 
 | Action or input | If the case is fraud | If the case is legitimate |
 |---|---|---|
-| Monitor, or close as no fraud | \(1.0 \times E\) | 0 |
-| Decline | \$25 | \$25 |
-| Block card | \(\min(\$60, E)\) | \$60 |
-| Customer validation | evidence \$2, plus delay \(0.02E\) | same |
-| Step-up authentication | evidence \$3, plus delay \(0.02E\) | same |
-| Analyst request | evidence \$8, plus delay \(0.02E\) | same |
+| Monitor, or close as no fraud | <span class="tex">1.0 \times E</span> | 0 |
+| Decline | USD 25 | USD 25 |
+| Block card | <span class="tex">\min(60, E)</span> | USD 60 |
+| Customer validation | evidence USD 2, plus delay <span class="tex">0.02E</span> | same |
+| Step-up authentication | evidence USD 3, plus delay <span class="tex">0.02E</span> | same |
+| Analyst request | evidence USD 8, plus delay <span class="tex">0.02E</span> | same |
 
 Decline is a flat friction either way. A missed fraud costs the exposure. Blocking a legitimate card costs \$60. Blocking a fraudulent card costs the smaller of \$60 and the exposure, because the loss it averts is the exposure.
 
-Expected value of sample information for a gather action \(g\) is the drop in expected cost after a two-outcome Bayesian update, minus the price of asking:
+Expected value of sample information for a gather action <span class="tex">g</span> is the drop in expected cost after a two-outcome Bayesian update, minus the price of asking:
 
-$$
-EVSI(g) = EC(a^\*) - \mathbb{E}[EC(a^\*_{\mathrm{post}})] - C_{\mathrm{evidence}}(g) - C_{\mathrm{delay}}
-$$
+<div class="tex-block">EVSI(g) = EC(a^{*}) - \mathbb{E}[EC(a^{*}_{\mathrm{post}})] - C_{\mathrm{evidence}}(g) - C_{\mathrm{delay}}</div>
 
 The signal likelihoods are documented priors, not fit on this file. A customer denial in the historical file is outcome-derived, so learning it would leak the label.
 
-| Evidence | \(P(\mathrm{signal}\mid\mathrm{fraud})\) | \(P(\mathrm{signal}\mid\mathrm{legit})\) |
+| Evidence | <span class="tex">P(\mathrm{signal}\mid\mathrm{fraud})</span> | <span class="tex">P(\mathrm{signal}\mid\mathrm{legit})</span> |
 |---|---:|---:|
 | Customer validation | 0.75 | 0.05 |
 | Step-up authentication | 0.90 | 0.02 |
 | Analyst information | 0.60 | 0.10 |
 
-$$
-P(F \mid s) = \frac{p\, L(s \mid F)}{p\, L(s \mid F) + (1-p)\, L(s \mid \neg F)}
-$$
+<div class="tex-block">P(F \mid s) = \frac{p\, L(s \mid F)}{p\, L(s \mid F) + (1-p)\, L(s \mid \neg F)}</div>
 
 The gate gathers when the best of those three values is above \$0, the same action has not already been requested, and the stop rules above have not fired. HHG-011 and HHG-014 are left uncertain because step-up is worth requesting and no reply was supplied. HHG-013 is the other shape: the live pass returns 9 percent, monitoring is cheaper than blocking, and the case closes as no fraud.
 
@@ -283,7 +265,7 @@ Five typologies come with the task. The sixth is a count, not a label we liked. 
 
 The demo device is Samsung SM-G935F Chrome on Android, already marked by the bank analysts as unmatched to the five documented patterns, on closed cases CC-2649, CC-2971, CC-2985, and CC-3035. The name in the product is cross-account shared-device ring. The agent is allowed to describe it only after that discovery gate passes. It is a lead. It is not a hidden challenge label.
 
-A separate check, pattern enrichment inside the 20 investigated cases only, used the same 2,000 draws and found no statistic that survives at \(\alpha = 0.05\). The directions point the right way. The test on \(n = 20\) does not clear the bar, and the p-values are shipped anyway.
+A separate check, pattern enrichment inside the 20 investigated cases only, used the same 2,000 draws and found no statistic that survives at <span class="tex">\alpha = 0.05</span>. The directions point the right way. The test on <span class="tex">n = 20</span> does not clear the bar, and the p-values are shipped anyway.
 
 The watchlist is a third, time-aware scan. It returns 186 November–December transactions that are outside the scored pack, have bank risk below 0.50, sit on a Build-qualified device linked to at least three other customers' confirmed fraud that closed before the candidate, and sit on a profile shared by at most 25 customers. One further lead was imported as HHG-902. The 186 are alerts. Device strings are coarse and collide across people. Opening one runs the same agent. It does not mark the transaction fraudulent.
 
@@ -318,9 +300,12 @@ python scripts/verify_submission.py --require-source
 
 A graph-backed run needs TigerGraph on the VM, then `bash gsql/connect_and_verify.sh verify` and `python -m bench.run --graph-agent --live`. The [README](https://github.com/devanshranjan10/sumora-hhgoa-2026#run-it) has the exact invocation. The [2:53 demo](https://youtu.be/-eyAHKQIo4c) is one live session: HHG-013 closes at 9 percent, HHG-011 stays open on step-up, and the trace keeps the MCP query that returned the row.
 
+<style>
+.tex-block { margin: 1.1rem 0; overflow-x: auto; text-align: center; }
+span.tex { white-space: nowrap; }
+</style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js"></script>
 <script type="module">
   import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
   mermaid.initialize({ startOnLoad: false, theme: "neutral", securityLevel: "strict" });
@@ -334,16 +319,19 @@ A graph-backed run needs TigerGraph on the VM, then `bash gsql/connect_and_verif
   }
   await mermaid.run({ querySelector: ".mermaid" });
   const drawMath = () => {
-    if (!window.renderMathInElement) {
+    if (!window.katex) {
       setTimeout(drawMath, 40);
       return;
     }
-    window.renderMathInElement(document.body, {
-      delimiters: [
-        { left: "$$", right: "$$", display: true },
-        { left: "\\(", right: "\\)", display: false }
-      ],
-      throwOnError: false
+    document.querySelectorAll(".tex-block").forEach((el) => {
+      const src = el.textContent.trim();
+      el.textContent = "";
+      window.katex.render(src, el, { displayMode: true, throwOnError: false });
+    });
+    document.querySelectorAll("span.tex").forEach((el) => {
+      const src = el.textContent.trim();
+      el.textContent = "";
+      window.katex.render(src, el, { displayMode: false, throwOnError: false });
     });
   };
   drawMath();
