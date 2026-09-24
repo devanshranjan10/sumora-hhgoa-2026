@@ -1,0 +1,21 @@
+[Unit]
+Description=TigerGraph MCP for Sumora agent
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ranjansrivastav
+WorkingDirectory=/opt/sumora/current
+Environment=TG_HOST=http://127.0.0.1
+Environment=TG_GRAPHNAME=SumoraFraudGraph
+Environment=TG_RESTPP_PORT=9000
+Environment=TG_GS_PORT=14240
+EnvironmentFile=/etc/sumora/tigergraph-mcp.env
+ExecStart=/opt/sumora/venv/bin/tigergraph-mcp --transport streamable-http --host 127.0.0.1 --port 8001 --allowed-tools tigergraph__run_installed_query
+Restart=on-failure
+RestartSec=5
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target

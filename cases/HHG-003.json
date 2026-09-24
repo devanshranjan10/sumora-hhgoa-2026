@@ -1,0 +1,101 @@
+{
+  "case": {
+    "affected_txn_ids": [
+      "T3530164"
+    ],
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "evidence": [
+      {
+        "claim": "Flagged transaction T3530164 ($49.00, card-present)",
+        "entity_ids": [
+          "T3530164"
+        ],
+        "ref": "q_evidence_pack",
+        "source": "graph"
+      },
+      {
+        "claim": "Device/structure links prior case(s) CC-3327, CC-2935, CC-3682",
+        "entity_ids": [
+          "CC-3327",
+          "CC-2935",
+          "CC-3682"
+        ],
+        "ref": "q_case_structural_similarity",
+        "source": "graph"
+      },
+      {
+        "claim": "Policy check (data/HHGOA_IEEE/README.md#Fraud Policy): # Fraud Policy\n\nVersion 1.0. This is the policy your agent operates under. Action names and approval routes in your case files must use the exact identifiers be",
+        "entity_ids": [],
+        "ref": "graphrag.retrieve",
+        "source": "document"
+      }
+    ],
+    "exposure_usd": 49.0,
+    "first_suspicious_txn_id": "T3530164",
+    "fraud_probability": 0.95,
+    "graph_case_id": "HHG-003",
+    "pattern": "none",
+    "pattern_description": "",
+    "similar_prior_cases": [
+      "CC-3327",
+      "CC-2935",
+      "CC-3682"
+    ],
+    "status": "closed_fraud",
+    "summary": "Trigger: customer report on transaction T3530164 ($49.00, card C08623-K2). Findings: p=0.95 (90% CI 0.94-0.95), 3 evidence items. Pattern: none. Stopping: decline transaction remains cost-optimal for every p in the 90% CI, so extra evidence cannot flip the decision. Actions: DECLINE_TRANSACTION -> BLOCK_CARD -> CREATE_CASE; approval in-line. Memory: 3 closed prior case(s) cited.",
+    "verdict": "fraud",
+    "written_to_graph": true
+  },
+  "case_id": "HHG-003",
+  "evidence_requests": [],
+  "latency_s": 17.573,
+  "next_best_actions": {
+    "final": [
+      {
+        "action": "DECLINE_TRANSACTION",
+        "reason": "decision gate selected DECLINE_TRANSACTION as the minimum expected-cost action",
+        "route": "L1"
+      },
+      {
+        "action": "BLOCK_CARD",
+        "reason": "p=0.95 with 3 evidence items; exposure $49.00 is under $2,500",
+        "route": "L1"
+      },
+      {
+        "action": "CREATE_CASE",
+        "reason": "fraud episode confirmed",
+        "route": "auto"
+      }
+    ],
+    "initial": [
+      {
+        "action": "DECLINE_TRANSACTION",
+        "reason": "decision gate selected DECLINE_TRANSACTION as the minimum expected-cost action",
+        "route": "L1"
+      },
+      {
+        "action": "BLOCK_CARD",
+        "reason": "p=0.95 with 3 evidence items; exposure $49.00 is under $2,500",
+        "route": "L1"
+      },
+      {
+        "action": "CREATE_CASE",
+        "reason": "fraud episode confirmed",
+        "route": "auto"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "activity_dates": [],
+    "file": false,
+    "narrative": "",
+    "reason": "3a: filing threshold not met; case only, no report",
+    "subjects": [],
+    "total_amount_usd": 0
+  },
+  "stop_reason": "robust_optimal:DECLINE_TRANSACTION_for_all_p_in_ci",
+  "tokens": 1800,
+  "tool_calls": 9
+}

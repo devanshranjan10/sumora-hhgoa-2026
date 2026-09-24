@@ -1,0 +1,81 @@
+{
+  "case_id": "HHG-004",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3583227"
+    ],
+    "first_suspicious_txn_id": "3583227",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 128.33,
+    "evidence": [
+      {
+        "claim": "Customer explicitly denied making the transaction.",
+        "source": "customer",
+        "ref": "Customer C08106 message",
+        "entity_ids": [
+          "C08106",
+          "3583227"
+        ]
+      },
+      {
+        "claim": "The transaction is a single, uncharacteristic event for the customer.",
+        "source": "graph",
+        "ref": "Transaction history for C08106-K1",
+        "entity_ids": [
+          "C08106-K1"
+        ]
+      },
+      {
+        "claim": "The transaction is linked to a cluster of other transactions from the same device profile.",
+        "source": "graph",
+        "ref": "Edges from C08106-K1 to cluster IC:21429",
+        "entity_ids": [
+          "C08106-K1",
+          "IC:21429"
+        ]
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "The customer reported a $128.33 transaction they did not authorize. The transaction is uncharacteristic for the customer and is linked to a cluster of other transactions from the same device profile, indicating a shared point of compromise. The evidence strongly supports a verdict of fraud.",
+    "next_best_actions": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Confirmed fraud; block card."
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "L1",
+        "reason": "R2: Customer denies the transaction; recommend BLOCK_CARD and CREATE_CASE."
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L1",
+        "reason": "R2: Case connects to a shared device profile."
+      }
+    ],
+    "sar": {
+      "file": true,
+      "reason": "R2: Fraud is confirmed and connects to a shared device profile.",
+      "narrative": "Customer C08106 reported a fraudulent online transaction of $128.33 on card C08106-K1. The transaction was made on 2016-12-29. Investigation revealed the transaction is linked to a cluster of other transactions from the same device profile, indicating a shared point of compromise. The activity is consistent with card-not-present fraud.",
+      "subjects": [
+        "C08106"
+      ],
+      "total_amount_usd": 128.33,
+      "activity_dates": [
+        "2016-12-29",
+        "2016-12-29"
+      ]
+    },
+    "stop_reason": "Customer verification response confirmed the transaction was fraudulent, settling the case.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  }
+}

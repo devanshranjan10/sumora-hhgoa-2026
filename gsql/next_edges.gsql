@@ -1,0 +1,11 @@
+USE GRAPH SumoraFraudGraph
+
+// One-time job definition for a graph created before job_load_next was added
+// to loading.gsql. Fresh deployments get this job from loading.gsql.
+
+CREATE LOADING JOB job_load_next FOR GRAPH SumoraFraudGraph {
+    DEFINE FILENAME f_next = "/home/tigergraph/data_in/HHGOA_IEEE/prepped/next_edges.csv";
+    LOAD f_next
+      TO EDGE NEXT VALUES ($"from_txn", $"to_txn", 1)
+      USING header="true", separator=",", eol="\n";
+}

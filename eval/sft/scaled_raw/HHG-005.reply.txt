@@ -1,0 +1,76 @@
+{
+  "case_id": "HHG-005",
+  "case": {
+    "status": "closed_legitimate",
+    "verdict": "legitimate",
+    "fraud_probability": 0.1,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "3523199",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 0.0,
+    "evidence": [
+      {
+        "claim": "The transaction was flagged by a risk score of 0.54, which is below the threshold for high confidence.",
+        "source": "document",
+        "ref": "CASE:trigger_score",
+        "entity_ids": [
+          "3523199"
+        ]
+      },
+      {
+        "claim": "The transaction is a single, moderate-value online purchase and does not fit the pattern of card testing.",
+        "source": "graph",
+        "ref": "EVIDENCE DIGEST:transactions",
+        "entity_ids": [
+          "3523199"
+        ]
+      },
+      {
+        "claim": "The transaction does not share a device, email, or other identifier with any known fraud cluster.",
+        "source": "graph",
+        "ref": "EVIDENCE DIGEST:edges",
+        "entity_ids": [
+          "3523199"
+        ]
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "The case was triggered by a moderate risk score (0.54) on a single online transaction of $100.07. Analysis of the transaction and related graph data shows no evidence of fraud; the activity is consistent with normal customer behavior and is not linked to any known fraud patterns or clusters. The transaction is assessed as legitimate.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "no fraud evidence"
+      }
+    ],
+    "final": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "no fraud evidence"
+      }
+    ],
+    "what_changed": "none: decision unchanged after evidence review"
+  },
+  "sar": {
+    "file": false,
+    "reason": "No fraud was confirmed or strongly suspected.",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0.0,
+    "activity_dates": []
+  },
+  "stop_reason": "Fraud probability is <= 0.15 (0.10) and is supported by multiple independent pieces of evidence (low risk score, no links to fraud clusters, no pattern match).",
+  "tool_calls": 4,
+  "tokens": 1364,
+  "latency_s": 0.0
+}

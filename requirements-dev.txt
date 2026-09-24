@@ -1,0 +1,4 @@
+-r requirements-cpu.txt
+pandas==2.3.3
+pytest==9.1.1
+ruff==0.16.8

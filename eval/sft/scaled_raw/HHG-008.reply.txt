@@ -1,0 +1,88 @@
+{
+  "case_id": "HHG-008",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3558054"
+    ],
+    "first_suspicious_txn_id": "3558054",
+    "connected_card_ids": [
+      "C13171-K1"
+    ],
+    "connected_device_profiles": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 55.68,
+    "evidence": [
+      {
+        "claim": "Customer explicitly denied making the transaction.",
+        "source": "customer",
+        "ref": "Customer C13171 message",
+        "entity_ids": [
+          "C13171",
+          "3558054"
+        ]
+      },
+      {
+        "claim": "The transaction was made from a device profile not previously associated with the customer.",
+        "source": "graph",
+        "ref": "Device profile for transaction 3558054 not in customer C13171's history.",
+        "entity_ids": [
+          "C13171",
+          "3558054"
+        ]
+      },
+      {
+        "claim": "The transaction originated from a device profile that is part of a cluster linked to other confirmed fraud cases.",
+        "source": "graph",
+        "ref": "Device profile linked to cluster IC:10114, which has a history of fraud.",
+        "entity_ids": [
+          "3558054",
+          "IC:10114"
+        ]
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "The customer reported a $55.68 transaction they did not authorize. Investigation revealed the transaction originated from a new device profile for the customer and that this same device is part of a cluster (IC:10114) linked to other fraud. This confirms the transaction is fraudulent.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "what_changed": "none: decision unchanged after evidence review"
+  },
+  "sar": {
+    "file": true,
+    "reason": "R2, SAR Policy: Fraud is confirmed and connects to a shared device profile linked to other fraud.",
+    "narrative": "Customer C13171 reported a fraudulent online transaction of $55.68 (ID 3558054) on 2016-12-20. The transaction originated from a device profile not previously used by the customer. This same device profile is part of a larger cluster (IC:10114) that has been linked to other confirmed fraud cases, indicating a coordinated attack or shared point of compromise.",
+    "subjects": [
+      "C13171"
+    ],
+    "total_amount_usd": 55.68,
+    "activity_dates": [
+      "2016-12-20",
+      "2016-12-20"
+    ]
+  },
+  "stop_reason": "Customer verification response confirmed the transaction was fraudulent, settling the case.",
+  "tool_calls": 4,
+  "tokens": 1644,
+  "latency_s": 0.0
+}

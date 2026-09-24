@@ -1,0 +1,124 @@
+{
+  "case_id": "HHG-006",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3476682"
+    ],
+    "first_suspicious_txn_id": "3476682",
+    "connected_card_ids": [
+      "C06224-K1",
+      "C03533-K1",
+      "C05083-K1",
+      "C08269-K1",
+      "C00180-K1",
+      "C07260-K1",
+      "C02342-K1",
+      "C00452-K1",
+      "C11133-K1",
+      "C11633-K1",
+      "C07462-K1",
+      "C02859-K1",
+      "C04848-K1"
+    ],
+    "connected_device_profiles": [
+      "DP:Trident/7.0|ie 11.0 for desktop|1920x1080",
+      "DP:iOS Device|mobile safari 11.0|2208x1242"
+    ],
+    "exposure_usd": 482.12,
+    "evidence": [
+      {
+        "claim": "Customer explicitly denied making the $482.12 transaction.",
+        "source": "customer",
+        "ref": "trigger_text",
+        "entity_ids": [
+          "C07297"
+        ]
+      },
+      {
+        "claim": "The transaction is linked to a cluster of other transactions on multiple cards from the same merchant.",
+        "source": "graph",
+        "ref": "edges",
+        "entity_ids": [
+          "C06224-K1",
+          "C03533-K1",
+          "C05083-K1",
+          "C08269-K1",
+          "C00180-K1",
+          "C07260-K1",
+          "C02342-K1",
+          "C00452-K1",
+          "C11133-K1",
+          "C11633-K1",
+          "C07462-K1",
+          "C02859-K1",
+          "C04848-K1"
+        ]
+      },
+      {
+        "claim": "The transaction is part of a larger cluster of activity originating from the same merchant.",
+        "source": "graph",
+        "ref": "edges",
+        "entity_ids": [
+          "IC:17503|441.0|aol.com"
+        ]
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "The customer reported a $482.12 transaction they did not authorize. Graph analysis revealed this transaction is part of a larger, coordinated activity involving multiple cards and the same merchant, indicating a card-not-present fraud pattern. The evidence strongly supports a fraud verdict.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "what_changed": "none: decision unchanged after evidence review"
+  },
+  "sar": {
+    "file": true,
+    "reason": "SAR policy: Fraud is confirmed and connects to a shared element (merchant cluster) across multiple cards.",
+    "narrative": "On 2016-11-22, customer C07297 reported a fraudulent $482.12 online transaction (ID 3476682) on their card C07297-K1. Investigation revealed this transaction was part of a larger, coordinated card-not-present fraud scheme. The activity originated from a shared merchant cluster (IC:17503) and involved multiple customer cards, indicating a systematic compromise of card details.",
+    "subjects": [
+      "C07297",
+      "C06224-K1",
+      "C03533-K1",
+      "C05083-K1",
+      "C08269-K1",
+      "C00180-K1",
+      "C07260-K1",
+      "C02342-K1",
+      "C00452-K1",
+      "C11133-K1",
+      "C11633-K1",
+      "C07462-K1",
+      "C02859-K1",
+      "C04848-K1"
+    ],
+    "total_amount_usd": 482.12,
+    "activity_dates": [
+      "2016-11-22",
+      "2016-11-22"
+    ]
+  },
+  "stop_reason": "Customer denial of the transaction provides definitive evidence of fraud, settling the case.",
+  "tool_calls": 4,
+  "tokens": 1664,
+  "latency_s": 0.0
+}

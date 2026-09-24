@@ -1,0 +1,111 @@
+{
+  "case_id": "HHG-015",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3464869"
+    ],
+    "first_suspicious_txn_id": "3464869",
+    "connected_card_ids": [
+      "C06224-K1",
+      "C07741-K1",
+      "C02231-K1",
+      "C05459-K1",
+      "C09666-K1",
+      "C06512-K1",
+      "C07947-K1",
+      "C09586-K1",
+      "C07997-K1",
+      "C01953-K1",
+      "C08774-K1",
+      "C01385-K1",
+      "C10264-K1"
+    ],
+    "connected_device_profiles": [
+      "DP:MacOS|safari generic|2560x1600",
+      "DP:NX16A8116KP|chrome 64.0 for android|1280x800",
+      "DP:Windows|chrome 63.0|1680x1050",
+      "DP:Windows|chrome 62.0|3200x1800",
+      "DP:MacOS|chrome 63.0|1280x800",
+      "DP:MacOS|chrome 62.0|1920x1080",
+      "DP:Windows|chrome 65.0|1280x1024",
+      "DP:MacOS|chrome 62.0|1440x900",
+      "DP:iOS Device|mobile safari 11.0|2208x1242",
+      "DP:Windows|chrome 63.0|1920x1200",
+      "DP:Windows|edge 16.0|1600x900",
+      "DP:MacOS|safari generic|1440x900"
+    ],
+    "exposure_usd": 599.94,
+    "evidence": [
+      {
+        "claim": "A single transaction was flagged by a risk model with a score of 0.77.",
+        "source": "document",
+        "ref": "case_id: HHG-015",
+        "entity_ids": [
+          "3464869"
+        ]
+      },
+      {
+        "claim": "The flagged transaction is part of a cluster of 12 other transactions on the same day, all originating from the same cluster (IC:17503).",
+        "source": "graph",
+        "ref": "edges",
+        "entity_ids": [
+          "C06224-K1",
+          "IC:17503"
+        ]
+      },
+      {
+        "claim": "The cluster IC:17503 is associated with a high volume of suspicious activity across multiple cards and devices.",
+        "source": "graph",
+        "ref": "edges",
+        "entity_ids": [
+          "IC:17503"
+        ]
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "A single high-value online transaction was flagged by a risk model. Investigation revealed it was part of a coordinated attack originating from a shared cluster (IC:17503) that was also used for numerous other suspicious transactions on the same day. This indicates a clear card-not-present fraud pattern.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "what_changed": "none: decision unchanged after evidence review"
+  },
+  "sar": {
+    "file": true,
+    "reason": "SAR policy: Fraud is strongly suspected and connects to a shared device profile (IC:17503) used in a coordinated attack.",
+    "narrative": "On 2016-11-17, a single card-not-present transaction for $599.94 was flagged on card C03042-K1. Investigation revealed the transaction was part of a larger, coordinated fraud event originating from a shared cluster (IC:17503). This cluster was used to execute multiple fraudulent transactions on the same day, indicating a targeted attack against multiple customers. The activity suggests a fraudster is using compromised card details to make online purchases.",
+    "subjects": [
+      "C03042-K1",
+      "IC:17503"
+    ],
+    "total_amount_usd": 599.94,
+    "activity_dates": [
+      "2016-11-17",
+      "2016-11-17"
+    ]
+  },
+  "stop_reason": "Fraud probability >= 0.85 (0.95) supported by multiple independent evidence pieces (shared cluster, high transaction velocity, high risk score).",
+  "tool_calls": 4,
+  "tokens": 1664,
+  "latency_s": 0.0
+}

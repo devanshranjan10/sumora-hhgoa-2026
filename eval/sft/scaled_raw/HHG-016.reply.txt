@@ -1,0 +1,135 @@
+{
+  "case_id": "HHG-016",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3534820"
+    ],
+    "first_suspicious_txn_id": "3534820",
+    "connected_card_ids": [
+      "C02889-K1",
+      "C01659-K1",
+      "C07187-K1",
+      "C09259-K1",
+      "C00768-K1",
+      "C06351-K1",
+      "C02019-K1",
+      "C13092-K1",
+      "C10224-K1",
+      "C10906-K1",
+      "C05944-K1",
+      "C06731-K1"
+    ],
+    "connected_device_profiles": [
+      "DP:SAMSUNG SM-A310F Build/NRD90M|samsung browser 6.4|",
+      "DP:SM-J320FN Build/LMY47V|chrome 66.0 for android|",
+      "DP:SM-J510FN|chrome 62.0 for android|",
+      "DP:Windows|chrome 63.0|",
+      "DP:Windows|edge 16.0|",
+      "DP:SAMSUNG SM-G900F Build/MMB29M|samsung browser 6.2|",
+      "DP:HUAWEI|chrome 61.0 for android|",
+      "DP:Windows|chrome 64.0|",
+      "DP:Windows|chrome 66.0|",
+      "DP:Moto G (4) Build/NPJS25.93-14-13|chrome generic|",
+      "DP:HUAWEI VNS-L31 Build/HUAWEIVNS-L31|chrome 66.0 for android|",
+      "DP:SM-G950F Build/NRD90M|chrome 64.0 for android|"
+    ],
+    "exposure_usd": 59.67,
+    "evidence": [
+      {
+        "claim": "Customer explicitly denied making the transaction.",
+        "source": "customer",
+        "ref": "Customer C09988 message",
+        "entity_ids": [
+          "C09988",
+          "3534820"
+        ]
+      },
+      {
+        "claim": "The transaction is linked to a cluster of other transactions from the same device profile and email domain.",
+        "source": "graph",
+        "ref": "Edges from transaction 3534820 to cluster IC:21363",
+        "entity_ids": [
+          "3534820",
+          "IC:21363",
+          "hotmail.com"
+        ]
+      },
+      {
+        "claim": "The cluster IC:21363 is associated with multiple other cards, indicating a shared point of compromise.",
+        "source": "graph",
+        "ref": "Edges from cluster IC:21363 to multiple card IDs",
+        "entity_ids": [
+          "IC:21363",
+          "C02889-K1",
+          "C01659-K1",
+          "C07187-K1",
+          "C09259-K1",
+          "C00768-K1",
+          "C06351-K1",
+          "C02019-K1",
+          "C13092-K1",
+          "C10224-K1",
+          "C10906-K1",
+          "C05944-K1",
+          "C06731-K1"
+        ]
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "The customer reported a fraudulent $59.67 transaction. Graph analysis revealed the transaction is linked to a cluster of other transactions from the same device and email domain, which is also connected to multiple other cards. This indicates a shared point of compromise and confirms the fraudulent nature of the activity.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "what_changed": "none: decision unchanged after evidence review"
+  },
+  "sar": {
+    "file": true,
+    "reason": "SAR is required as fraud is confirmed and the activity connects to a shared device profile and other cards' fraud (R6).",
+    "narrative": "On 2016-12-12, customer C09988 reported a fraudulent $59.67 online transaction (ID 3534820). Investigation revealed the transaction originated from a device profile and email domain (hotmail.com) that are also linked to a cluster of transactions on multiple other customer cards. This indicates a coordinated card-not-present fraud scheme using a shared point of compromise.",
+    "subjects": [
+      "C09988",
+      "C02889-K1",
+      "C01659-K1",
+      "C07187-K1",
+      "C09259-K1",
+      "C00768-K1",
+      "C06351-K1",
+      "C02019-K1",
+      "C13092-K1",
+      "C10224-K1",
+      "C10906-K1",
+      "C05944-K1",
+      "C06731-K1"
+    ],
+    "total_amount_usd": 59.67,
+    "activity_dates": [
+      "2016-12-12",
+      "2016-12-12"
+    ]
+  },
+  "stop_reason": "Customer denial of the transaction provides definitive evidence of fraud, settling the case.",
+  "tool_calls": 4,
+  "tokens": 1766,
+  "latency_s": 0.0
+}

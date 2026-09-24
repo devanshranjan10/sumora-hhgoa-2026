@@ -1,0 +1,366 @@
+{
+  "method": "Exam-period online transactions with bank risk below 0.50 sharing a Build/-qualified device profile with confirmed fraud on at least three other customers. Prior cases must have closed before the transaction; profiles seen on more than 25 customers are excluded. This is an alert, not a fraud verdict.",
+  "matching_transactions": 187,
+  "items": [
+    {
+      "transaction_id": "T3425188",
+      "customer_id": "C08962",
+      "timestamp": "2016-11-03 06:11:33",
+      "amount_usd": 13.11,
+      "bank_risk_score": 0.08,
+      "prior_confirmed_cases": [
+        "CC-3308",
+        "CC-3524",
+        "CC-3553",
+        "CC-3564",
+        "CC-3597"
+      ],
+      "prior_case_count": 23,
+      "prior_customer_count": 17,
+      "device_customer_count": 21,
+      "device_profile": "SM-J500M Build/LMY48B | chrome 64.0 for android"
+    },
+    {
+      "transaction_id": "T3465789",
+      "customer_id": "C05381",
+      "timestamp": "2016-11-17 19:33:04",
+      "amount_usd": 12.0,
+      "bank_risk_score": 0.02,
+      "prior_confirmed_cases": [
+        "CC-3308",
+        "CC-3524",
+        "CC-3553",
+        "CC-3564",
+        "CC-3597"
+      ],
+      "prior_case_count": 23,
+      "prior_customer_count": 17,
+      "device_customer_count": 21,
+      "device_profile": "SM-J500M Build/LMY48B | chrome 64.0 for android"
+    },
+    {
+      "transaction_id": "T3447773",
+      "customer_id": "C00426",
+      "timestamp": "2016-11-10 22:32:26",
+      "amount_usd": 147.48,
+      "bank_risk_score": 0.38,
+      "prior_confirmed_cases": [
+        "CC-0418",
+        "CC-0429",
+        "CC-0437",
+        "CC-0700",
+        "CC-1390"
+      ],
+      "prior_case_count": 13,
+      "prior_customer_count": 12,
+      "device_customer_count": 24,
+      "device_profile": "Moto G (5) Plus Build/NPNS25.137-15-11 | chrome generic"
+    },
+    {
+      "transaction_id": "T3432808",
+      "customer_id": "C06630",
+      "timestamp": "2016-11-05 18:11:12",
+      "amount_usd": 108.46,
+      "bank_risk_score": 0.39,
+      "prior_confirmed_cases": [
+        "CC-3680",
+        "CC-3714",
+        "CC-3728",
+        "CC-3741",
+        "CC-3768"
+      ],
+      "prior_case_count": 14,
+      "prior_customer_count": 12,
+      "device_customer_count": 24,
+      "device_profile": "LG-H650 Build/MRA58K | chrome 64.0 for android"
+    },
+    {
+      "transaction_id": "T3438590",
+      "customer_id": "C12897",
+      "timestamp": "2016-11-07 17:34:36",
+      "amount_usd": 56.42,
+      "bank_risk_score": 0.19,
+      "prior_confirmed_cases": [
+        "CC-0418",
+        "CC-0429",
+        "CC-0437",
+        "CC-0700",
+        "CC-1390"
+      ],
+      "prior_case_count": 13,
+      "prior_customer_count": 12,
+      "device_customer_count": 24,
+      "device_profile": "Moto G (5) Plus Build/NPNS25.137-15-11 | chrome generic"
+    },
+    {
+      "transaction_id": "T3438786",
+      "customer_id": "C12897",
+      "timestamp": "2016-11-07 18:32:53",
+      "amount_usd": 44.42,
+      "bank_risk_score": 0.34,
+      "prior_confirmed_cases": [
+        "CC-0418",
+        "CC-0429",
+        "CC-0437",
+        "CC-0700",
+        "CC-1390"
+      ],
+      "prior_case_count": 13,
+      "prior_customer_count": 12,
+      "device_customer_count": 24,
+      "device_profile": "Moto G (5) Plus Build/NPNS25.137-15-11 | chrome generic"
+    },
+    {
+      "transaction_id": "T3435913",
+      "customer_id": "C05630",
+      "timestamp": "2016-11-06 18:41:37",
+      "amount_usd": 44.33,
+      "bank_risk_score": 0.06,
+      "prior_confirmed_cases": [
+        "CC-0418",
+        "CC-0429",
+        "CC-0437",
+        "CC-0700",
+        "CC-1390"
+      ],
+      "prior_case_count": 13,
+      "prior_customer_count": 12,
+      "device_customer_count": 24,
+      "device_profile": "Moto G (5) Plus Build/NPNS25.137-15-11 | chrome generic"
+    },
+    {
+      "transaction_id": "T3426572",
+      "customer_id": "C07867",
+      "timestamp": "2016-11-03 18:35:26",
+      "amount_usd": 44.24,
+      "bank_risk_score": 0.11,
+      "prior_confirmed_cases": [
+        "CC-0418",
+        "CC-0429",
+        "CC-0437",
+        "CC-0700",
+        "CC-1390"
+      ],
+      "prior_case_count": 13,
+      "prior_customer_count": 12,
+      "device_customer_count": 24,
+      "device_profile": "Moto G (5) Plus Build/NPNS25.137-15-11 | chrome generic"
+    },
+    {
+      "transaction_id": "T3477298",
+      "customer_id": "C08072",
+      "timestamp": "2016-11-22 00:07:53",
+      "amount_usd": 36.6,
+      "bank_risk_score": 0.16,
+      "prior_confirmed_cases": [
+        "CC-0418",
+        "CC-0429",
+        "CC-0437",
+        "CC-0700",
+        "CC-1390"
+      ],
+      "prior_case_count": 13,
+      "prior_customer_count": 12,
+      "device_customer_count": 24,
+      "device_profile": "Moto G (5) Plus Build/NPNS25.137-15-11 | chrome generic"
+    },
+    {
+      "transaction_id": "T3487853",
+      "customer_id": "C06054",
+      "timestamp": "2016-11-26 00:09:57",
+      "amount_usd": 36.53,
+      "bank_risk_score": 0.05,
+      "prior_confirmed_cases": [
+        "CC-0418",
+        "CC-0429",
+        "CC-0437",
+        "CC-0700",
+        "CC-1390"
+      ],
+      "prior_case_count": 13,
+      "prior_customer_count": 12,
+      "device_customer_count": 24,
+      "device_profile": "Moto G (5) Plus Build/NPNS25.137-15-11 | chrome generic"
+    },
+    {
+      "transaction_id": "T3430983",
+      "customer_id": "C06744",
+      "timestamp": "2016-11-05 00:31:51",
+      "amount_usd": 19.94,
+      "bank_risk_score": 0.15,
+      "prior_confirmed_cases": [
+        "CC-0418",
+        "CC-0429",
+        "CC-0437",
+        "CC-0700",
+        "CC-1390"
+      ],
+      "prior_case_count": 13,
+      "prior_customer_count": 12,
+      "device_customer_count": 24,
+      "device_profile": "Moto G (5) Plus Build/NPNS25.137-15-11 | chrome generic"
+    },
+    {
+      "transaction_id": "T3490832",
+      "customer_id": "C11598",
+      "timestamp": "2016-11-27 02:22:19",
+      "amount_usd": 16.7,
+      "bank_risk_score": 0.06,
+      "prior_confirmed_cases": [
+        "CC-0418",
+        "CC-0429",
+        "CC-0437",
+        "CC-0700",
+        "CC-1390"
+      ],
+      "prior_case_count": 13,
+      "prior_customer_count": 12,
+      "device_customer_count": 24,
+      "device_profile": "Moto G (5) Plus Build/NPNS25.137-15-11 | chrome generic"
+    },
+    {
+      "transaction_id": "T3456523",
+      "customer_id": "C01433",
+      "timestamp": "2016-11-14 04:38:14",
+      "amount_usd": 14.24,
+      "bank_risk_score": 0.01,
+      "prior_confirmed_cases": [
+        "CC-0418",
+        "CC-0429",
+        "CC-0437",
+        "CC-0700",
+        "CC-1390"
+      ],
+      "prior_case_count": 13,
+      "prior_customer_count": 12,
+      "device_customer_count": 24,
+      "device_profile": "Moto G (5) Plus Build/NPNS25.137-15-11 | chrome generic"
+    },
+    {
+      "transaction_id": "T3458598",
+      "customer_id": "C06744",
+      "timestamp": "2016-11-14 23:55:34",
+      "amount_usd": 9.09,
+      "bank_risk_score": 0.15,
+      "prior_confirmed_cases": [
+        "CC-0418",
+        "CC-0429",
+        "CC-0437",
+        "CC-0700",
+        "CC-1390"
+      ],
+      "prior_case_count": 13,
+      "prior_customer_count": 12,
+      "device_customer_count": 24,
+      "device_profile": "Moto G (5) Plus Build/NPNS25.137-15-11 | chrome generic"
+    },
+    {
+      "transaction_id": "T3442853",
+      "customer_id": "C04248",
+      "timestamp": "2016-11-09 01:22:43",
+      "amount_usd": 4.65,
+      "bank_risk_score": 0.02,
+      "prior_confirmed_cases": [
+        "CC-0418",
+        "CC-0429",
+        "CC-0437",
+        "CC-0700",
+        "CC-1390"
+      ],
+      "prior_case_count": 13,
+      "prior_customer_count": 12,
+      "device_customer_count": 24,
+      "device_profile": "Moto G (5) Plus Build/NPNS25.137-15-11 | chrome generic"
+    },
+    {
+      "transaction_id": "T3450376",
+      "customer_id": "C04034",
+      "timestamp": "2016-11-11 22:19:20",
+      "amount_usd": 147.48,
+      "bank_risk_score": 0.49,
+      "prior_confirmed_cases": [
+        "CC-0418",
+        "CC-0429",
+        "CC-0437",
+        "CC-0700",
+        "CC-1390"
+      ],
+      "prior_case_count": 12,
+      "prior_customer_count": 11,
+      "device_customer_count": 24,
+      "device_profile": "Moto G (5) Plus Build/NPNS25.137-15-11 | chrome generic"
+    },
+    {
+      "transaction_id": "T3479684",
+      "customer_id": "C06843",
+      "timestamp": "2016-11-22 22:46:47",
+      "amount_usd": 49.28,
+      "bank_risk_score": 0.13,
+      "prior_confirmed_cases": [
+        "CC-1286",
+        "CC-1540",
+        "CC-2247",
+        "CC-2712",
+        "CC-2826"
+      ],
+      "prior_case_count": 11,
+      "prior_customer_count": 11,
+      "device_customer_count": 24,
+      "device_profile": "Moto G (4) Build/NPJ25.93-14.5 | chrome generic"
+    },
+    {
+      "transaction_id": "T3474789",
+      "customer_id": "C11923",
+      "timestamp": "2016-11-21 00:17:03",
+      "amount_usd": 43.0,
+      "bank_risk_score": 0.06,
+      "prior_confirmed_cases": [
+        "CC-0418",
+        "CC-0429",
+        "CC-0437",
+        "CC-0700",
+        "CC-1390"
+      ],
+      "prior_case_count": 12,
+      "prior_customer_count": 11,
+      "device_customer_count": 24,
+      "device_profile": "Moto G (5) Plus Build/NPNS25.137-15-11 | chrome generic"
+    },
+    {
+      "transaction_id": "T3499859",
+      "customer_id": "C08962",
+      "timestamp": "2016-11-30 12:41:36",
+      "amount_usd": 35.4,
+      "bank_risk_score": 0.32,
+      "prior_confirmed_cases": [
+        "CC-4657",
+        "CC-4693",
+        "CC-4877",
+        "CC-4937",
+        "CC-4941"
+      ],
+      "prior_case_count": 13,
+      "prior_customer_count": 11,
+      "device_customer_count": 14,
+      "device_profile": "SM-A300H Build/LRX22G | chrome generic"
+    },
+    {
+      "transaction_id": "T3508584",
+      "customer_id": "C08962",
+      "timestamp": "2016-12-02 23:40:27",
+      "amount_usd": 7.0,
+      "bank_risk_score": 0.07,
+      "prior_confirmed_cases": [
+        "CC-0418",
+        "CC-0437",
+        "CC-0700",
+        "CC-1390",
+        "CC-1451"
+      ],
+      "prior_case_count": 12,
+      "prior_customer_count": 11,
+      "device_customer_count": 24,
+      "device_profile": "Moto G (5) Plus Build/NPNS25.137-15-11 | chrome generic"
+    }
+  ]
+}

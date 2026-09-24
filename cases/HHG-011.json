@@ -1,0 +1,94 @@
+{
+  "case": {
+    "affected_txn_ids": [
+      "T3583368"
+    ],
+    "connected_card_ids": [],
+    "connected_device_profiles": [
+      "SM-G610F Build/NRD90M | chrome 66.0 for android"
+    ],
+    "evidence": [
+      {
+        "claim": "Flagged transaction T3583368 ($131.30, online)",
+        "entity_ids": [
+          "T3583368"
+        ],
+        "ref": "q_evidence_pack",
+        "source": "graph"
+      },
+      {
+        "claim": "Device/structure links prior case(s) CC-2247, CC-3905, CC-2673",
+        "entity_ids": [
+          "CC-2247",
+          "CC-3905",
+          "CC-2673"
+        ],
+        "ref": "q_case_structural_similarity",
+        "source": "graph"
+      },
+      {
+        "claim": "Policy check (data/HHGOA_IEEE/README.md#Fraud Policy): # Fraud Policy\n\nVersion 1.0. This is the policy your agent operates under. Action names and approval routes in your case files must use the exact identifiers be",
+        "entity_ids": [],
+        "ref": "graphrag.retrieve",
+        "source": "document"
+      }
+    ],
+    "exposure_usd": 131.3,
+    "first_suspicious_txn_id": "T3583368",
+    "fraud_probability": 0.38,
+    "graph_case_id": "HHG-011",
+    "pattern": "card_not_present_new_device",
+    "pattern_description": "",
+    "similar_prior_cases": [
+      "CC-2247",
+      "CC-3905",
+      "CC-2673"
+    ],
+    "status": "open",
+    "summary": "Trigger: customer report on transaction T3583368 ($131.30, card C11923-K2). Findings: p=0.38 (90% CI 0.27-0.46), 3 evidence items. Pattern: card_not_present_new_device. Stopping: an evidence request is pending; no customer or analyst response was invented. Actions: STEP_UP_AUTH -> MONITOR_CARD; approval in-line. Memory: 3 closed prior case(s) cited.",
+    "verdict": "uncertain",
+    "written_to_graph": true
+  },
+  "case_id": "HHG-011",
+  "evidence_requests": [
+    {
+      "asked_after_step": 2,
+      "assumed_response": "No response supplied; request pending",
+      "type": "step_up_auth"
+    }
+  ],
+  "latency_s": 22.051,
+  "next_best_actions": {
+    "final": [
+      {
+        "action": "STEP_UP_AUTH",
+        "reason": "evidence request has positive expected value ($5.70); fraud decision remains pending",
+        "route": "auto"
+      },
+      {
+        "action": "MONITOR_CARD",
+        "reason": "monitor while the requested evidence is pending",
+        "route": "auto"
+      }
+    ],
+    "initial": [
+      {
+        "action": "MONITOR_CARD",
+        "reason": "ambiguous signal (p=0.38); monitor while gathering evidence",
+        "route": "auto"
+      }
+    ],
+    "what_changed": "Requested STEP_UP_AUTH before deciding; no response was supplied, so the fraud decision remains pending."
+  },
+  "sar": {
+    "activity_dates": [],
+    "file": false,
+    "narrative": "",
+    "reason": "3a: filing threshold not met; case only, no report",
+    "subjects": [],
+    "total_amount_usd": 0
+  },
+  "stop_reason": "awaiting_evidence_response:step_up_auth",
+  "tokens": 1800,
+  "tool_calls": 9
+}

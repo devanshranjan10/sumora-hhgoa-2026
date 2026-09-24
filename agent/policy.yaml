@@ -1,0 +1,47 @@
+# Sumora policy-as-code (spec §6): cost model, route tables, SAR triggers.
+# Loaded by agent/gate.py; R1-R10 guards stay executable in actions_api/policy.py
+# (single source of truth - this file references, never redefines, them).
+
+costs:
+  C_FN_frac: 1.0              # fraud missed = full exposure lost (frac of exposure_usd)
+  C_FP_decline_usd: 25.0      # customer friction of a wrongly declined auth
+  C_FP_block_usd: 60.0        # friction of a wrongly blocked card
+  C_delay_frac: 0.02          # assumed short verification delay per gather round
+  C_evidence_usd:
+    customer_validation: 2.0
+    step_up_auth: 3.0
+    analyst_info: 8.0
+
+thresholds:
+  p_high: 0.85                # confident-fraud bound (with >=2 evidence classes)
+  p_low: 0.15                 # confident-legitimate bound (with >=2 evidence classes)
+  evsi_min_usd: 0.0           # gather only while best EVSI exceeds this
+  block_card_l2_usd: 2500.0   # BLOCK_CARD above this routes L2 (mirrors actions_api)
+
+sar:
+  # SAR consistency: sar.file == (FILE_REPORT in final actions) - enforced in
+  # bench/schema.py. These triggers say when FILE_REPORT SHOULD be proposed.
+  min_p: 0.60
+  rules_any:
+    - R2   # customer denies
+    - R5   # card-testing sequence
+    - R6   # shared origin (mule-like fan-in)
+  min_exposure_usd: 500.0
+
+routes:
+  # Route decision table (documentation of actions_api.policy.required_route;
+  # the executable source of truth is actions_api/policy.py).
+  MONITOR_CARD: auto
+  VERIFY_WITH_CUSTOMER: auto
+  STEP_UP_AUTH: auto
+  REQUEST_ANALYST_INFO: auto
+  CLOSE_NO_FRAUD: auto
+  CLOSE_FRAUD: auto
+  DECLINE_TRANSACTION: L1
+  BLOCK_CARD: L1_or_L2_if_over_threshold
+  BLOCK_ALL_CARDS: L2
+  FILE_REPORT: L2
+
+memory:
+  admission: bank_confirmed_only   # confirmed ClosedCases citable in similar_prior_cases
+  provisional_weight: 0.5          # agent-resolved cases get half weight until validated

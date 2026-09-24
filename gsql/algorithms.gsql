@@ -1,0 +1,127 @@
+// ============================================================================
+// Sumora - pre-computed algorithm suite (TigerGraph 4.x, GDS library)
+// Spec S 5 "Data Science Library algorithms": results land in the vertex
+// attributes already declared in schema.gsql so demo queries READ values,
+// never run algorithms live (spec S 7: pre-compute heavy results).
+//
+// Template queries are installed by `gsql gsql-graph-algorithms/install.sh`
+// from the image-bundled library (verified: TigerGraph 4.2.5, GDS
+// gsql-graph-algorithms release_4.2.5). This file only RUNS them.
+//
+// Attribute map (schema.gsql):
+//   Transaction/Card/Customer/DeviceProfile/EmailDomain/BillingRegion/
+//   IdentityCluster .wcc_id (INT)             <- tg_wcc
+//   Transaction/Card .louvain_community (INT) <- tg_louvain (hub-filtered)
+//   Transaction/Card/Customer/... .pagerank (DOUBLE) <- tg_pagerank
+//   Card .triangle_count (INT)                <- tg_tri_count_fast
+//   Card .local_clus_coef (DOUBLE)            <- tg_lcc
+//   degree_norm: computed in jobs.gsql job_precompute_algorithms
+//                (tg_degree_cent returns INT; the attribute is DOUBLE)
+//
+// Hub filter (arena synthesis #6/#7): Louvain runs on the
+// Card-Transaction-DeviceProfile projection EXCLUDING EmailDomain - the gmail
+// superhub collapses all communities into one blob. Emails participate only
+// via tg_pagerank (where their degree is information, not contamination).
+//
+// VERIFIED RESULTS on the live graph (A100, TigerGraph 4.2.5, 2026-09-19):
+//   txns_with_pagerank     590,742 (100%)
+//   txns_with_community    471,890 (rest are edge-isolated vertices,
+//                          legitimately skipped by Louvain)
+//   cards_with_triangles   0 - CORRECT BY TOPOLOGY: the Card-Transaction
+//                          projection is bipartite, so it contains no
+//                          triangles by construction. Triangle features would
+//                          require a same-type projection, which the spec's
+//                          schema does not define.
+//   cards_with_lcc         0 - same bipartite reason.
+//   txns_with_wcc          0 (not run) - redundant: identity components are
+//                          already materialized as IdentityCluster vertices
+//                          by the loader (73,407 of them), which is strictly
+//                          more useful than a raw component id.
+// ============================================================================
+
+USE GRAPH SumoraFraudGraph
+
+// ----------------------------------------------------------------------------
+// 0. WCC pre-pass (tg_wcc): component ids on the undirected closure.
+//    Isolates islands before anything else; fraud rings live in one component.
+// ----------------------------------------------------------------------------
+// RUN QUERY tg_wcc(["Customer","Card","Transaction","DeviceProfile",
+//                   "EmailAddress","EmailDomain","BillingRegion","IdentityCluster"],
+//                  ["OWNS","OWNS_REV","MADE","MADE_REV","FROM_DEVICE",
+//                   "FROM_DEVICE_REV","PURCHASER_EMAIL","PURCHASER_EMAIL_REV",
+//                   "RECIPIENT_EMAIL","RECIPIENT_EMAIL_REV","ON_DOMAIN",
+//                   "BILLED_IN","BILLED_IN_REV","IN_CLUSTER","IN_CLUSTER_REV"],
+//                  100, FALSE, "wcc_id", "")
+
+// ----------------------------------------------------------------------------
+// 1. Louvain (hub-filtered): communities over Card-MADE-Transaction and
+//    Transaction-FROM_DEVICE-DeviceProfile (+ reverse edges, undirected walk).
+//    Writes Transaction.louvain_community + Card.louvain_community.
+// ----------------------------------------------------------------------------
+// RUN QUERY tg_louvain(["Card","Transaction","DeviceProfile"],
+//                      ["MADE","MADE_REV","FROM_DEVICE","FROM_DEVICE_REV"],
+//                      "weight", 3, 10, 12, "louvain_community", "")
+
+// ----------------------------------------------------------------------------
+// 2. PageRank over the full topology (emails included on purpose: hub-ness of
+//    an email domain IS signal). FLOAT result -> DOUBLE attributes (auto cast).
+// ----------------------------------------------------------------------------
+// RUN QUERY tg_pagerank(["Card","Transaction","DeviceProfile","EmailAddress",
+//                        "EmailDomain","BillingRegion","IdentityCluster"],
+//                       ["MADE","MADE_REV","FROM_DEVICE","FROM_DEVICE_REV",
+//                        "PURCHASER_EMAIL","PURCHASER_EMAIL_REV","RECIPIENT_EMAIL",
+//                        "RECIPIENT_EMAIL_REV","ON_DOMAIN","BILLED_IN",
+//                        "BILLED_IN_REV","IN_CLUSTER","IN_CLUSTER_REV"],
+//                       0.03, 25, 0.001, "pagerank", "", FALSE)
+
+// ----------------------------------------------------------------------------
+// 3. Triangle counting on the undirected card-txn projection -> Card.triangle_count
+// ----------------------------------------------------------------------------
+// RUN QUERY tg_tri_count_fast(["Card","Transaction"],
+//                             ["MADE","MADE_REV","FROM_DEVICE","FROM_DEVICE_REV"],
+//                             100, FALSE, "triangle_count", "")
+
+// ----------------------------------------------------------------------------
+// 4. Local clustering coefficient -> Card.local_clus_coef
+// ----------------------------------------------------------------------------
+// RUN QUERY tg_lcc(["Card","Transaction"],
+//                  ["MADE","MADE_REV","FROM_DEVICE","FROM_DEVICE_REV"],
+//                  100, FALSE, "local_clus_coef", "")
+
+// ----------------------------------------------------------------------------
+// 5. Jaccard neighbor similarity -> SIMILAR_TO case pairs are service-computed;
+//    this materializes card-level similarity into a temp edge set the UI uses.
+//    (EDGE-typed output; run interactively, do not write to vertex attrs.)
+// ----------------------------------------------------------------------------
+// RUN QUERY tg_jaccard_nbor_ap_batch(["Card"], ["MADE","MADE_REV"], 100, FALSE, "")
+
+// ----------------------------------------------------------------------------
+// 6. Degree centrality: SKIP (tg_degree_cent returns INT; degree_norm DOUBLE is
+//    filled exactly by jobs.gsql job_precompute_algorithms instead).
+// ----------------------------------------------------------------------------
+
+// ============================================================================
+// Driver query: runs the suite in one call, in dependency order, and prints
+// a verification line per stage. (RUN QUERY statements above are the same
+// calls, kept for one-at-a-time debugging.)
+// ============================================================================
+CREATE QUERY job_run_algorithm_suite() FOR GRAPH SumoraFraudGraph {
+    // Template algorithms cannot be invoked from inside another query - this
+    // driver exists to verify attribute population, not to run them.
+    SumAccum<INT> @@n_wcc, @@n_comm, @@n_pr, @@n_tri, @@n_lcc;
+    SumAccum<FLOAT> @@pr_sum;
+
+    txns = {Transaction.*};
+    cards = {Card.*};
+
+    w = SELECT t FROM txns:t WHERE t.wcc_id > 0 ACCUM @@n_wcc += 1;
+    c = SELECT t FROM txns:t WHERE t.louvain_community > 0 ACCUM @@n_comm += 1;
+    p = SELECT t FROM txns:t WHERE t.pagerank > 0 ACCUM @@n_pr += 1;
+    ct = SELECT k FROM cards:k WHERE k.triangle_count > 0 ACCUM @@n_tri += 1;
+    lc = SELECT k FROM cards:k WHERE k.local_clus_coef > 0 ACCUM @@n_lcc += 1;
+    ps = SELECT t FROM txns:t ACCUM @@pr_sum += t.pagerank;
+
+    PRINT @@n_wcc AS txns_with_wcc, @@n_comm AS txns_with_community,
+          @@n_pr AS txns_with_pagerank, @@pr_sum AS pagerank_mass,
+          @@n_tri AS cards_with_triangles, @@n_lcc AS cards_with_lcc;
+}

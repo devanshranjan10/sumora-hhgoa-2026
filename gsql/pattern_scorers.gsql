@@ -1,0 +1,428 @@
+// ============================================================================
+// Sumora - documented-pattern scorers (TigerGraph 4.x)
+// Spec S 5: the 5 documented patterns become DETERMINISTIC per-pattern GSQL
+// scorers, not LLM guesses (arena synthesis #7). Each scorer returns a score
+// plus support/contradict counts; q_pattern_score persists them as Hypothesis
+// vertices, and q_case_feature_vector / q_hypothesis_balance consume those.
+//
+// Scoring convention (uniform across scorers):
+//   score = 1 - prod(1 - w_i)   ("noisy-or" over weighted signals)
+//   w_i in (0,1], each a normalized count/ratio read from the graph - the LLM
+//   never invents these numbers.
+//
+// Dependencies: job_precompute_algorithms must have run (DeviceProfile
+// .degree_norm/.distinct_card_count/.fraud_txn_count) and
+// job_propagate_case_labels must have run (label_confirmed_fraud).
+// GSQL notes:
+//   - LIMIT takes literals only; caps happen in accumulators/service layer.
+//   - NEXT has no reverse edge: "previous txn" = Card -(MADE)-> t1 -(NEXT)-> t2
+//     with t2 bound to the target (traversal via the card, never NEXT_REV).
+//   - All scorers are SYNCHRONIC pure functions over the current graph.
+// ============================================================================
+
+USE GRAPH SumoraFraudGraph
+
+// ----------------------------------------------------------------------------
+// q_card_testing_score(card_id, window_s, probe_max_amt, min_probes)
+// README pattern 1 / Policy R5: "three or more tiny online authorizations,
+// often under $5, then a larger purchase."
+//   w1 = min(1, n_probes / (min_probes + 1))            burst size
+//   w2 = n_probes / n_txns                              probe share of activity
+//   w3 = 1 iff n_probes >= min_probes AND a probe->large transition exists
+//        (successor amt > 10 x probe_max_amt within window_s of the probe)
+// Contradict: >= 4 txns on the card and zero probes (normal card use).
+// ----------------------------------------------------------------------------
+CREATE QUERY q_card_testing_score(STRING card_id, INT window_s = 3600,
+                                  FLOAT probe_max_amt = 5.0, INT min_probes = 3,
+                                  INT cutoff_dt = 0)
+FOR GRAPH SumoraFraudGraph {
+    SumAccum<INT> @@n_probe, @@n_txn, @@n_pairs, @@n_transition;
+    SumAccum<FLOAT> @@w1, @@w2, @@w3, @@score;
+    SumAccum<INT> @@support, @@contradict;
+
+    cards = {Card.*};
+    C = SELECT c FROM cards:c WHERE c.card_id == card_id;
+
+    allt = SELECT t
+        FROM C:c -(MADE>:e1)- Transaction:t
+        WHERE cutoff_dt == 0 OR
+              (t.txn_dt <= cutoff_dt AND t.txn_dt >= cutoff_dt - window_s)
+        ACCUM
+            @@n_txn += 1,
+            @@n_probe += (CASE WHEN t.amt <= probe_max_amt AND t.channel == "online"
+                              THEN 1 ELSE 0 END);
+
+    // NEXT walk (per-card time order): probe -> larger purchase transitions
+    // whose gap from the probe is within the window. Directed NEXT traversal:
+    // t1 is the earlier txn (edge source), t2 the later (edge target).
+    pairs = SELECT t2
+        FROM C:c -(MADE>:e2)- Transaction:t1 -(NEXT>:e3)- Transaction:t2
+        WHERE cutoff_dt == 0 OR
+              (t1.txn_dt >= cutoff_dt - window_s AND t2.txn_dt <= cutoff_dt)
+        ACCUM
+            @@n_pairs += 1,
+            @@n_transition += (CASE
+                WHEN t1.amt <= probe_max_amt AND t1.channel == "online"
+                 AND (t2.txn_dt - t1.txn_dt) <= window_s
+                 AND t2.amt > 10.0 * probe_max_amt
+                THEN 1 ELSE 0 END);
+
+    @@w1 = (CASE WHEN @@n_probe == 0 THEN 0.0
+                WHEN 1.0 * @@n_probe / (min_probes + 1) < 1.0
+                THEN 1.0 * @@n_probe / (min_probes + 1)
+                ELSE 1.0 END);
+    @@w2 = (CASE WHEN @@n_txn > 0 THEN 1.0 * @@n_probe / @@n_txn ELSE 0.0 END);
+    @@w3 = (CASE WHEN @@n_probe >= min_probes AND @@n_transition > 0 THEN 1.0 ELSE 0.0 END);
+
+    @@score = 1.0 - (1.0 - @@w1) * (1.0 - @@w2) * (1.0 - @@w3);
+    @@support = @@n_probe + @@n_transition;
+    @@contradict = (CASE WHEN @@n_probe == 0 AND @@n_txn >= 4 THEN @@n_txn ELSE 0 END);
+
+    PRINT @@score AS card_testing_score, @@n_probe AS probes,
+          @@n_transition AS probe_to_large_transitions, @@n_txn AS card_txns,
+          @@n_pairs AS sequenced_pairs,
+          @@support AS support_count, @@contradict AS contradict_count;
+}
+
+// ----------------------------------------------------------------------------
+// q_new_device_cnp_score(txn_id)
+// README pattern 3: CNP fraud from a device marked New for this account.
+//   w1 = 0.6 online-with-device + 0.2 if this device has NO prior txns on
+//        this card (device-novel proxy; id_35 New/Found is not in-graph -
+//        see loading.gsql scope note)
+//   w2 = 0.5 if the device serves >= 3 distinct cards, 0.25 if exactly 2
+//        (distinct_card_count from job_precompute_algorithms)
+//   w3 = 0.4 if the txn's purchaser email domain was never used before by
+//        this card
+//   w4 = 0.3 if the amount is > 3x the card's prior mean AND > $50
+// Contradict: this device + card have a shared history (>= 3 prior txns).
+// ----------------------------------------------------------------------------
+CREATE QUERY q_new_device_cnp_score(STRING txn_id)
+FOR GRAPH SumoraFraudGraph {
+    SumAccum<FLOAT> @@w1, @@w2, @@w3, @@w4, @@score, @@amt, @@typical;
+    SumAccum<INT> @@prior_txns, @@n_hist, @@n_domains, @@n_mismatch;
+    SumAccum<INT> @@dev_distinct_cards, @@support, @@contradict;
+    SumAccum<STRING> @@dev_id;
+    SetAccum<STRING> @@card_domains;
+
+    txns = {Transaction.*};
+    T = SELECT t FROM txns:t WHERE t.txn_id == txn_id;
+
+    // Anchor: the txn's device + amount + channel
+    anchor = SELECT d
+        FROM T:t -(FROM_DEVICE>:e4)- DeviceProfile:d
+        ACCUM
+            @@dev_id += d.profile_id,
+            @@dev_distinct_cards += d.distinct_card_count,
+            @@amt += t.amt,
+            @@w1 += (CASE WHEN t.channel == "online" THEN 0.6 ELSE 0.0 END);
+
+    // Prior txns of THIS card from THIS device (device novel for this card?)
+    prior = SELECT t2
+        FROM T:t -(MADE_REV>:e1)- Card:k -(MADE>:e2)- Transaction:t2 -(FROM_DEVICE>:e5)- DeviceProfile:d2
+        WHERE t2.txn_dt < t.txn_dt AND d2.profile_id == @@dev_id
+        ACCUM @@prior_txns += 1;
+    @@w1 = @@w1 + (CASE WHEN @@prior_txns == 0 AND @@w1 > 0 THEN 0.2 ELSE 0.0 END);
+
+    @@w2 = (CASE WHEN @@dev_distinct_cards >= 3 THEN 0.5
+                ELSE CASE WHEN @@dev_distinct_cards == 2 THEN 0.25 ELSE 0.0 END END);
+
+    // Email-domain novelty vs the card's prior purchaser domains
+    doms = SELECT e
+        FROM T:t -(MADE_REV>:e1)- Card:k -(MADE>:e2)- Transaction:t2 -(PURCHASER_EMAIL>:e6)- EmailAddress:e
+        WHERE t2.txn_dt < t.txn_dt
+        ACCUM
+            @@card_domains += e.email,
+            @@n_domains += 1;
+    mism = SELECT e
+        FROM T:t -(PURCHASER_EMAIL>:e7)- EmailAddress:e
+        WHERE NOT @@card_domains.contains(e.email)
+        ACCUM @@n_mismatch += 1;
+    @@w3 = (CASE WHEN @@n_domains > 0 AND @@n_mismatch > 0 THEN 0.4 ELSE 0.0 END);
+
+    // Amount outlier vs the card's prior mean
+    hist = SELECT t2
+        FROM T:t -(MADE_REV>:e1)- Card:k -(MADE>:e2)- Transaction:t2
+        WHERE t2.txn_dt < t.txn_dt
+        ACCUM @@n_hist += 1, @@typical += t2.amt;
+    @@typical = (CASE WHEN @@n_hist > 0 THEN @@typical / @@n_hist ELSE @@amt END);
+    @@w4 = (CASE WHEN @@n_hist >= 3 AND @@amt > 3.0 * @@typical AND @@amt > 50.0
+                THEN 0.3 ELSE 0.0 END);
+
+    @@score = 1.0 - (1.0 - @@w1) * (1.0 - @@w2) * (1.0 - @@w3) * (1.0 - @@w4);
+    @@support = @@n_mismatch + (CASE WHEN @@prior_txns == 0 THEN 1 ELSE 0 END);
+    @@contradict = (CASE WHEN @@prior_txns >= 3 THEN @@prior_txns ELSE 0 END);
+
+    PRINT @@score AS new_device_cnp_score, @@w1 AS w_device_novel,
+          @@w2 AS w_device_shared, @@w3 AS w_email_mismatch,
+          @@w4 AS w_amount_outlier, @@prior_txns AS prior_txns_same_device,
+          @@support AS support_count, @@contradict AS contradict_count;
+}
+
+// ----------------------------------------------------------------------------
+// q_out_of_region_score(txn_id)
+// README pattern 4 / R2-R3: purchases in a region the card has no history in.
+//   w1 = 0.6 if the card has prior region-bearing txns and NONE in this
+//        region; 0.3 if the card has no history at all (weak signal)
+//   w2 = 0.4 if the PREVIOUS txn on the card (found via the card join:
+//        Card -(MADE)-> prev -(NEXT)-> target) was in a different region
+//        within the 3-day travel bound
+//   w3 = 0.3 if the txn is card-present (pattern 4 is card-present use)
+// Contradict: prior txns of this card exist in this same region.
+// ----------------------------------------------------------------------------
+CREATE QUERY q_out_of_region_score(STRING txn_id)
+FOR GRAPH SumoraFraudGraph {
+    SumAccum<FLOAT> @@w1, @@w2, @@w3, @@score, @@travel_days;
+    SumAccum<INT> @@n_prior_region, @@prior_in_region, @@support, @@contradict;
+    MaxAccum<INT> @@dt_s;                 // gap to the predecessor (<= 1 NEXT edge)
+    SetAccum<STRING> @@txn_regions;
+    MaxAccum<STRING> @prev_region;        // per-txn: region of the PREVIOUS txn
+
+    txns = {Transaction.*};
+    T = SELECT t FROM txns:t WHERE t.txn_id == txn_id;
+
+    reg = SELECT r
+        FROM T:t -(BILLED_IN>:e8)- BillingRegion:r
+        ACCUM @@txn_regions += r.region_id;
+
+    // Card's prior region-bearing txns
+    hist = SELECT r
+        FROM T:t -(MADE_REV>:e1)- Card:k -(MADE>:e2)- Transaction:t2 -(BILLED_IN>:e9)- BillingRegion:r
+        WHERE t2.txn_dt < t.txn_dt
+        ACCUM @@n_prior_region += 1;
+    same = SELECT r
+        FROM T:t -(MADE_REV>:e1)- Card:k -(MADE>:e2)- Transaction:t2 -(BILLED_IN>:e10)- BillingRegion:r
+        WHERE t2.txn_dt < t.txn_dt AND @@txn_regions.contains(r.region_id)
+        ACCUM @@prior_in_region += 1;
+
+    @@w1 = (CASE WHEN @@n_prior_region == 0 THEN 0.3
+                ELSE CASE WHEN @@prior_in_region == 0 THEN 0.6 ELSE 0.0 END END);
+
+    // Previous txn on the card: Card -(MADE)-> t1 -(NEXT)-> t2 == txn_id
+    // (directed NEXT traversal only - NEXT has no reverse edge).
+    cards_all = {Card.*};
+    prev = SELECT t2
+        FROM cards_all:k -(MADE>:e11)- Transaction:t1 -(NEXT>:e12)- Transaction:t2
+        WHERE t2.txn_id == txn_id
+        ACCUM @@dt_s += t2.txn_dt - t1.txn_dt;
+
+    prevreg = SELECT r
+        FROM cards_all:k -(MADE>:e13)- Transaction:t1 -(NEXT>:e14)- Transaction:t2 -(BILLED_IN>:e15)- BillingRegion:r
+        WHERE t2.txn_id == txn_id
+        ACCUM t2.@prev_region += r.region_id;
+
+    // w2: predecessor region differs from this txn's region, within the
+    // 3-day travel bound.
+    flip = SELECT t
+        FROM T:t
+        ACCUM
+            @@w2 += (CASE
+                WHEN @@dt_s > 0 AND @@dt_s <= 259200
+                 AND t.@prev_region != ""
+                 AND NOT @@txn_regions.contains(t.@prev_region)
+                THEN 0.4 ELSE 0.0 END),
+            @@travel_days += 1.0 * @@dt_s / 86400.0;
+
+    pres = SELECT t
+        FROM T:t
+        ACCUM @@w3 += (CASE WHEN t.channel == "in_person" THEN 0.3 ELSE 0.0 END);
+
+    @@score = 1.0 - (1.0 - @@w1) * (1.0 - @@w2) * (1.0 - @@w3);
+    @@support = @@prior_in_region + (CASE WHEN @@w2 > 0 THEN 1 ELSE 0 END);
+    @@contradict = @@prior_in_region;
+
+    PRINT @@score AS out_of_region_score, @@w1 AS w_region_new,
+          @@w2 AS w_region_flip, @@w3 AS w_card_present,
+          @@prior_in_region AS prior_txns_in_region,
+          @@travel_days AS days_since_prev_txn,
+          @@support AS support_count, @@contradict AS contradict_count;
+}
+
+// ----------------------------------------------------------------------------
+// q_ato_score(customer_id)
+// README pattern 5 / FinCEN ATO advisory: activity inconsistent with the
+// cardholder -> stolen CREDENTIALS. Signals (noisy-or):
+//   w1 = 0.5 if > 20% of the customer's device-bearing txns ride devices
+//        seen at most once anywhere (novel-device proxy via degree_norm;
+//        requires job_precompute_algorithms); 0.25 if any such txn exists
+//   w2 = 0.4 if > 30% of txns carry M-flag mismatches (M1/M2 false or "0");
+//        0.2 if any
+//   w3 = 0.3 if any single card had >= 5 txns in one calendar day (burst)
+//   w4 = 0.4 if any of the customer's devices also carried confirmed fraud
+// ----------------------------------------------------------------------------
+CREATE QUERY q_ato_score(STRING customer_id)
+FOR GRAPH SumoraFraudGraph {
+    SumAccum<FLOAT> @@w1, @@w2, @@w3, @@w4, @@score;
+    SumAccum<INT> @@n_txns, @@n_novel, @@n_mismatch, @@n_fraud_dev,
+                  @@n_cards, @@support, @@contradict;
+    MaxAccum<INT> @@max_24h;
+    MapAccum<FLOAT, INT> @day_hist;   // per-card: day_index -> txn count
+
+    custs = {Customer.*};
+    C0 = SELECT c FROM custs:c WHERE c.customer_id == customer_id;
+
+    cards = SELECT k FROM C0:c -(OWNS>:e16)- Card:k
+            ACCUM @@n_cards += 1;
+
+    tx = SELECT t FROM cards:k -(MADE>:e17)- Transaction:t
+         ACCUM @@n_txns += 1;
+
+    fdev = SELECT d
+        FROM cards:k -(MADE>:e18)- Transaction:t -(FROM_DEVICE>:e19)- DeviceProfile:d
+        WHERE d.fraud_txn_count > 0
+        ACCUM @@n_fraud_dev += 1;
+    @@w4 = (CASE WHEN @@n_fraud_dev > 0 THEN 0.4 ELSE 0.0 END);
+
+    novel = SELECT t
+        FROM cards:k -(MADE>:e20)- Transaction:t -(FROM_DEVICE>:e21)- DeviceProfile:d
+        WHERE d.degree_norm <= 1
+        ACCUM @@n_novel += 1;
+    @@w1 = (CASE WHEN @@n_txns > 0 AND 1.0 * @@n_novel / @@n_txns > 0.2 THEN 0.5
+                ELSE CASE WHEN @@n_novel > 0 THEN 0.25 ELSE 0.0 END END);
+
+    mm = SELECT t
+        FROM cards:k -(MADE>:e22)- Transaction:t
+        WHERE (TOUPPER(t.M1) == "F" OR t.M1 == "0")
+           OR (TOUPPER(t.M2) == "F" OR t.M2 == "0")
+        ACCUM @@n_mismatch += 1;
+    @@w2 = (CASE WHEN @@n_txns > 0 AND 1.0 * @@n_mismatch / @@n_txns > 0.3 THEN 0.4
+                ELSE CASE WHEN @@n_mismatch > 0 THEN 0.2 ELSE 0.0 END END);
+
+    // Velocity burst: per-card per-day counts via a vertex-attached MapAccum
+    // (key = day index), then a per-card max read in POST-ACCUM.
+    burst = SELECT k
+        FROM cards:k -(MADE>:e23)- Transaction:t
+        ACCUM k.@day_hist += (FLOOR(1.0 * t.txn_dt / 86400.0) -> 1);
+
+    @@max_24h = 0;
+    bmax = SELECT k
+        FROM cards:k
+        POST-ACCUM
+            FOREACH (dk, dv) IN k.@day_hist DO
+                @@max_24h += dv
+            END;
+    @@w3 = (CASE WHEN @@max_24h >= 5 THEN 0.3 ELSE 0.0 END);
+
+    @@score = 1.0 - (1.0 - @@w1) * (1.0 - @@w2) * (1.0 - @@w3) * (1.0 - @@w4);
+    @@support = @@n_novel + @@n_mismatch + @@n_fraud_dev;
+    @@contradict = (CASE WHEN @@n_novel == 0 AND @@n_mismatch == 0 THEN @@n_txns ELSE 0 END);
+
+    PRINT @@score AS ato_score, @@w1 AS w_device_novel, @@w2 AS w_match_mismatch,
+          @@w3 AS w_velocity_burst, @@w4 AS w_shared_fraud,
+          @@n_cards AS n_cards, @@max_24h AS max_txns_one_day,
+          @@support AS support_count, @@contradict AS contradict_count;
+}
+
+// ----------------------------------------------------------------------------
+// q_card_not_present_score(txn_id)
+// README pattern 2 (base CNP layer; pattern 3 is its stronger variant):
+//   w1 = 0.5 online channel
+//   w2 = 0.4 amount > 3x the card's prior mean AND > $50
+//   w3 = 0.4 product code never used before by this card (needs >= 3 prior)
+//   w4 = 0.3 burst of 2-4 txns on the card within +/-48h (0.15 if > 4)
+// ----------------------------------------------------------------------------
+CREATE QUERY q_card_not_present_score(STRING txn_id)
+FOR GRAPH SumoraFraudGraph {
+    SumAccum<FLOAT> @@w1, @@w2, @@w3, @@w4, @@score, @@amt, @@typical;
+    SumAccum<INT> @@n_hist, @@n_burst, @@support, @@contradict;
+    SetAccum<STRING> @@card_products;
+
+    txns = {Transaction.*};
+    T = SELECT t FROM txns:t WHERE t.txn_id == txn_id;
+
+    base = SELECT t
+        FROM T:t
+        ACCUM
+            @@w1 += (CASE WHEN t.channel == "online" THEN 0.5 ELSE 0.0 END),
+            @@amt += t.amt;
+
+    hist = SELECT t2
+        FROM T:t -(MADE_REV>:e1)- Card:k -(MADE>:e2)- Transaction:t2
+        WHERE t2.txn_dt < t.txn_dt
+        ACCUM
+            @@n_hist += 1,
+            @@typical += t2.amt,
+            @@card_products += t2.product_cd;
+    @@typical = (CASE WHEN @@n_hist > 0 THEN @@typical / @@n_hist ELSE @@amt END);
+    @@w2 = (CASE WHEN @@n_hist >= 3 AND @@amt > 3.0 * @@typical AND @@amt > 50.0
+                THEN 0.4 ELSE 0.0 END);
+
+    prod = SELECT t
+        FROM T:t
+        ACCUM @@w3 += (CASE WHEN @@n_hist >= 3
+                            AND NOT @@card_products.contains(t.product_cd)
+                           THEN 0.4 ELSE 0.0 END);
+
+    burstc = SELECT t2
+        FROM T:t -(MADE_REV>:e1)- Card:k -(MADE>:e2)- Transaction:t2
+        WHERE abs(t2.txn_dt - t.txn_dt) <= 172800
+        ACCUM @@n_burst += 1;
+    @@w4 = (CASE WHEN @@n_burst >= 2 AND @@n_burst <= 4 THEN 0.3
+                ELSE CASE WHEN @@n_burst > 4 THEN 0.15 ELSE 0.0 END END);
+
+    @@score = 1.0 - (1.0 - @@w1) * (1.0 - @@w2) * (1.0 - @@w3) * (1.0 - @@w4);
+    @@support = @@n_burst;
+    @@contradict = @@n_hist;
+
+    PRINT @@score AS card_not_present_score, @@w1 AS w_online,
+          @@w2 AS w_amount_outlier, @@w3 AS w_new_product, @@w4 AS w_burst,
+          @@n_burst AS burst_size, @@n_hist AS prior_txn_count,
+          @@support AS support_count, @@contradict AS contradict_count;
+}
+
+// ----------------------------------------------------------------------------
+// q_pattern_score(case_id, p_ct, ct_sup, ct_con, p_cnp, cnp_sup, cnp_con,
+//                 p_cnpnd, cnpnd_sup, cnpnd_con, p_oor, oor_sup, oor_con,
+//                 p_ato, ato_sup, ato_con)
+// Orchestrator: the agent service runs the five scorers above, then persists
+// their results HERE as one Hypothesis vertex per pattern (upsert) linked to
+// the FraudCase via HAS_HYPOTHESIS. GSQL queries cannot call other queries with
+// scalar outputs portably, so persistence is parameterized - but the NUMBERS
+// still come only from the scorers' PRINT output, never from the LLM.
+// Pattern order (fixed, matches q_case_feature_vector):
+//   card_testing, card_not_present_fraud, card_not_present_new_device,
+//   out_of_region_use, account_takeover
+// ----------------------------------------------------------------------------
+CREATE QUERY q_pattern_score(STRING case_id,
+    DOUBLE p_ct, INT ct_sup, INT ct_con,
+    DOUBLE p_cnp, INT cnp_sup, INT cnp_con,
+    DOUBLE p_cnpnd, INT cnpnd_sup, INT cnpnd_con,
+    DOUBLE p_oor, INT oor_sup, INT oor_con,
+    DOUBLE p_ato, INT ato_sup, INT ato_con)
+FOR GRAPH SumoraFraudGraph {
+    SumAccum<INT> @@written;
+
+    cs = {FraudCase.*};
+    F = SELECT c FROM cs:c WHERE c.case_id == case_id;
+
+    INSERT INTO Hypothesis VALUES (
+        "HYP-" + case_id + "-card_testing", "card_testing", p_ct, ct_sup, ct_con);
+    INSERT INTO Hypothesis VALUES (
+        "HYP-" + case_id + "-card_not_present_fraud", "card_not_present_fraud",
+        p_cnp, cnp_sup, cnp_con);
+    INSERT INTO Hypothesis VALUES (
+        "HYP-" + case_id + "-card_not_present_new_device",
+        "card_not_present_new_device", p_cnpnd, cnpnd_sup, cnpnd_con);
+    INSERT INTO Hypothesis VALUES (
+        "HYP-" + case_id + "-out_of_region_use", "out_of_region_use",
+        p_oor, oor_sup, oor_con);
+    INSERT INTO Hypothesis VALUES (
+        "HYP-" + case_id + "-account_takeover", "account_takeover",
+        p_ato, ato_sup, ato_con);
+
+    INSERT INTO HAS_HYPOTHESIS VALUES (case_id,
+        "HYP-" + case_id + "-card_testing");
+    INSERT INTO HAS_HYPOTHESIS VALUES (case_id,
+        "HYP-" + case_id + "-card_not_present_fraud");
+    INSERT INTO HAS_HYPOTHESIS VALUES (case_id,
+        "HYP-" + case_id + "-card_not_present_new_device");
+    INSERT INTO HAS_HYPOTHESIS VALUES (case_id,
+        "HYP-" + case_id + "-out_of_region_use");
+    INSERT INTO HAS_HYPOTHESIS VALUES (case_id,
+        "HYP-" + case_id + "-account_takeover");
+
+    done = SELECT c FROM F:c
+           POST-ACCUM @@written += 1;
+
+    PRINT @@written AS cases_linked;
+}

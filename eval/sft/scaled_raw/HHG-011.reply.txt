@@ -1,0 +1,114 @@
+{
+  "case_id": "HHG-011",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3583368"
+    ],
+    "first_suspicious_txn_id": "3583368",
+    "connected_card_ids": [
+      "C03938-K1",
+      "C05595-K1",
+      "C05678-K1",
+      "C11923-K1"
+    ],
+    "connected_device_profiles": [
+      "DP:BLADE V8 SE Build/NRD90M|chrome 65.0 for android|",
+      "DP:SM-J105B Build/LMY47V|chrome 63.0 for android|",
+      "DP:Mi A1 Build/OPR1.170623.026||",
+      "DP:M4 SS4456 Build/LMY47V|chrome 66.0 for android|",
+      "DP:Ilium LT510 Build/MRA58K|chrome 62.0 for android|",
+      "DP:Mi A1 Build/OPR1.170623.026|chrome 66.0 for android|",
+      "DP:F80 PIABELLA Build/MRA58K|chrome 63.0 for android|",
+      "DP:7055A Build/KVT49L|chrome 62.0 for android|",
+      "DP:5095I Build/MRA58K|chrome 63.0 for android|",
+      "DP:BLADE V8 Build/NRD90M|chrome 55.0 for android|",
+      "DP:Moto Z2 Play Build/NPSS26.118-19-6|chrome 63.0 for android|",
+      "DP:ONE|chrome 63.0 for android|"
+    ],
+    "exposure_usd": 131.3,
+    "evidence": [
+      {
+        "claim": "Customer explicitly denied making the transaction.",
+        "source": "customer",
+        "ref": "Customer C11923 message",
+        "entity_ids": [
+          "C11923",
+          "3583368"
+        ]
+      },
+      {
+        "claim": "The transaction is part of a cluster of 12 similar online transactions on different cards.",
+        "source": "graph",
+        "ref": "edges",
+        "entity_ids": [
+          "C11923-K1",
+          "IC:21363"
+        ]
+      },
+      {
+        "claim": "All transactions in the cluster share the same cluster identifier (IC:21363).",
+        "source": "graph",
+        "ref": "edges",
+        "entity_ids": [
+          "IC:21363"
+        ]
+      },
+      {
+        "claim": "The cluster is associated with multiple email domains (live.com.mx, hotmail.com, etc.), indicating a shared origin.",
+        "source": "graph",
+        "ref": "cluster_ids",
+        "entity_ids": [
+          "IC:21363"
+        ]
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "The customer reported a fraudulent transaction of $131.30. Graph analysis revealed this transaction is part of a coordinated cluster of 12 similar online transactions across multiple cards, all originating from the same cluster (IC:21363). This indicates a shared origin and confirms the fraudulent nature of the activity.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "what_changed": "none: decision unchanged after evidence review"
+  },
+  "sar": {
+    "file": true,
+    "reason": "SAR is required for confirmed fraud that connects to a shared device profile or another card's fraud (R6).",
+    "narrative": "On 2016-12-29, customer C11923 reported a fraudulent online transaction of $131.30 (ID 3583368). Investigation revealed this transaction was part of a coordinated card-not-present fraud scheme. Graph analysis identified 12 similar transactions across four different customer cards originating from a shared cluster (IC:21363), indicating a common point of compromise or fraudster. The activity occurred between 2016-10-03 and 2016-12-29.",
+    "subjects": [
+      "C11923",
+      "C03938-K1",
+      "C05595-K1",
+      "C05678-K1",
+      "C11923-K1"
+    ],
+    "total_amount_usd": 131.3,
+    "activity_dates": [
+      "2016-10-03",
+      "2016-12-29"
+    ]
+  },
+  "stop_reason": "Customer denial of the transaction provides definitive evidence of fraud, settling the case.",
+  "tool_calls": 4,
+  "tokens": 1746,
+  "latency_s": 0.0
+}

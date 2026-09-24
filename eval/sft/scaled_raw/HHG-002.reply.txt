@@ -1,0 +1,84 @@
+{
+  "case_id": "HHG-002",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3478782"
+    ],
+    "first_suspicious_txn_id": "3478782",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 292.36,
+    "evidence": [
+      {
+        "claim": "A single transaction was flagged by a risk model with a score of 0.79.",
+        "source": "document",
+        "ref": "case_id: HHG-002",
+        "entity_ids": [
+          "3478782"
+        ]
+      },
+      {
+        "claim": "The flagged transaction is part of a cluster of 12 transactions on the same day (2016-11-22) from the same merchant (anonymous.com).",
+        "source": "graph",
+        "ref": "cluster_id: IC:18586",
+        "entity_ids": [
+          "C11891-K1",
+          "3478782"
+        ]
+      },
+      {
+        "claim": "The activity is highly anomalous compared to the customer's typical spending patterns in terms of merchant, frequency, and value.",
+        "source": "graph",
+        "ref": "customer_id: C11891",
+        "entity_ids": [
+          "C11891"
+        ]
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "A single transaction for $292.36 was flagged by a risk model. Investigation revealed it was part of a coordinated burst of 12 transactions on the same day from the same merchant, forming a clear and anomalous spending pattern. This strongly indicates a card-not-present fraud event.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "what_changed": "none: decision unchanged after evidence review"
+  },
+  "sar": {
+    "file": true,
+    "reason": "SAR policy: Fraud is strongly suspected and involves a coordinated pattern.",
+    "narrative": "On 2016-11-22, card C11891-K1, belonging to customer C11891, was used for a single transaction of $292.36. This transaction was flagged by a risk model and subsequent investigation revealed it was part of a coordinated burst of 12 transactions on the same day from the same merchant, 'anonymous.com'. This activity is highly anomalous and indicative of a card-not-present fraud event. The total exposure for this activity is $292.36.",
+    "subjects": [
+      "C11891-K1"
+    ],
+    "total_amount_usd": 292.36,
+    "activity_dates": [
+      "2016-11-22",
+      "2016-11-22"
+    ]
+  },
+  "stop_reason": "Fraud probability (0.95) is >= 0.85 and is supported by multiple independent evidence pieces (anomalous cluster, anomalous pattern).",
+  "tool_calls": 4,
+  "tokens": 1644,
+  "latency_s": 0.0
+}

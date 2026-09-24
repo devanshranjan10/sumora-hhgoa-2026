@@ -1,0 +1,4 @@
+USE GRAPH SumoraFraudGraph
+RUN QUERY tg_louvain(["Card","Transaction","DeviceProfile"], ["MADE","FROM_DEVICE"], "weight", 10, "louvain_community", "", FALSE)
+RUN QUERY tg_lcc("Card", "MADE", 100, FALSE, "local_clus_coef", "", FALSE)
+RUN QUERY tg_pagerank("Transaction", "MADE", 0.001, 25, 0.85, 100, FALSE, "pagerank", "", FALSE)

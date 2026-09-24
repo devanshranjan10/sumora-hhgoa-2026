@@ -1,0 +1,63 @@
+{
+  "case_id": "HHG-013",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 0.0,
+    "evidence": [
+      {
+        "claim": "Investigation signal: graph_linkage",
+        "source": "graph",
+        "ref": "teacher_trace",
+        "entity_ids": []
+      },
+      {
+        "claim": "Investigation signal: identity_features",
+        "source": "graph",
+        "ref": "teacher_trace",
+        "entity_ids": []
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "Sufficient evidence for high-confidence fraud verdict; cost of waiting exceeds expected value of further investigation. (rules fired: R5)",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "what_changed": "none: decision unchanged after evidence review"
+  },
+  "sar": {
+    "file": false,
+    "reason": "no SAR: criteria not met",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0.0,
+    "activity_dates": []
+  },
+  "stop_reason": "Sufficient evidence for high-confidence fraud verdict; cost of waiting exceeds expected value of further investigation. (rules fired: R5)",
+  "tool_calls": 6,
+  "tokens": 111,
+  "latency_s": 0.0
+}

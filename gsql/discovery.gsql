@@ -1,0 +1,237 @@
+// ============================================================================
+// Sumora - undocumented-pattern discovery (TigerGraph 4.x)
+// Spec S 5 "Undocumented-pattern pipeline" + arena synthesis #8:
+//   1. q_community_fingerprint(community_id) - 7-D structural fingerprint
+//   2. q_fingerprint_case_set(pattern_id) - SAME fingerprint over a documented
+//      pattern's closed-case cohort => the centroids (apples-to-apples)
+//   3. q_anomalous_communities(z_thresh, min_size) - density > mu + z*sigma
+//   4. q_community_stats(min_size) - per-community density table for the
+//      distance stage (GSQL PER/grouping is avoided; distance-to-centroid is
+//      computed in the service layer from these two outputs).
+// Negative control: the 1000x label-shuffle permutation test is run by the
+// SERVICE layer by (a) snapshotting densities, (b) flipping
+// label_confirmed_fraud randomly via job_permute_labels(INSERT-only boolean
+// flip), (c) re-running q_community_stats, (d) restoring. Communities with
+// p >= 0.05 are dropped BEFORE the LLM ever sees them (R9: describe, don't
+// force).
+//
+// Fingerprint dimensions (fixed order):
+//   [0] fraud_density          fraction of community txns with confirmed fraud
+//   [1] mean_velocity          mean NEXT-edge delta-t within the set (seconds)
+//   [2] amt_entropy            Shannon entropy of $100-bucket histogram (bits)
+//   [3] device_sharing_degree  device-bearing txns per txn (>=1; higher=sharing)
+//   [4] email_mismatch_rate    share of txns whose P-domain != R-domain
+//   [5] triangle_density       mean triangle_count over txns
+//   [6] new_device_rate        share of txns on devices with degree_norm <= 1
+// Note: P/R email domains are read from the Transaction M-adjacent CSV columns
+// via the loading-time edge structure - the fingerprint uses the
+// PURCHASER_EMAIL / RECIPIENT_EMAIL edges, not Transaction attributes.
+// ============================================================================
+
+USE GRAPH SumoraFraudGraph
+
+// ----------------------------------------------------------------------------
+// Shared corpus: all transactions of one Louvain community (candidate) or one
+// closed-case pattern cohort (centroid). Both fingerprint queries emit the
+// same 7-D vector + corpus size.
+// ----------------------------------------------------------------------------
+
+CREATE QUERY q_community_fingerprint(INT community_id)
+FOR GRAPH SumoraFraudGraph {
+    SumAccum<INT>   @@n_txns, @@n_fraud, @@n_mismatch, @@n_new_dev, @@n_vel,
+                    @@n_dev_txns, @@n_p, @@n_mismatch_edges;
+    SumAccum<FLOAT> @@sum_vel, @@sum_tri;
+    SumAccum<FLOAT> @@fraud_density, @@mean_velocity, @@device_sharing_degree,
+                    @@email_mismatch_rate, @@triangle_density, @@new_device_rate;
+    MapAccum<FLOAT, INT> @@bucket_hist;
+    ListAccum<FLOAT> @@fingerprint;
+    MaxAccum<INT> @bucket;   // per-txn $100 bucket
+
+    txns = {Transaction.*};
+    C = SELECT t
+        FROM txns:t
+        WHERE t.louvain_community == community_id AND community_id > 0
+        ACCUM
+            @@n_txns += 1,
+            @@n_fraud += (CASE WHEN t.label_confirmed_fraud THEN 1 ELSE 0 END),
+            @@sum_tri += t.triangle_count;
+
+    // amount histogram ($100 buckets) for entropy
+    amt = SELECT t
+        FROM C:t
+        ACCUM @@bucket_hist += (FLOOR(t.amt / 100.0) -> 1);
+
+    // velocity: mean NEXT delta-t within the community
+    vel = SELECT t2
+        FROM C:t1 -(NEXT>:e1)- Transaction:t2
+        WHERE t2.louvain_community == community_id
+        ACCUM @@n_vel += 1, @@sum_vel += (t2.txn_dt - t1.txn_dt);
+
+    // device sharing + new-device rate (per device-BEARING txn)
+    dev = SELECT d
+        FROM C:t -(FROM_DEVICE>:e2)- DeviceProfile:d
+        ACCUM
+            @@n_dev_txns += 1,
+            @@n_new_dev += (CASE WHEN d.degree_norm <= 1 THEN 1 ELSE 0 END);
+
+    // email mismatch: txn whose purchaser-domain != recipient-domain
+    // (via ON_DOMAIN from the two address vertices; domain string compare
+    // happens on EmailAddress ids, which embed the domain: "p:<dom>"/"r:<dom>")
+    em = SELECT t
+        FROM C:t -(PURCHASER_EMAIL>:e3)- EmailAddress:pe
+        ACCUM @@n_p += 1;
+
+    emr = SELECT t
+        FROM C:t -(PURCHASER_EMAIL>:e4)- EmailAddress:pe , C:t -(RECIPIENT_EMAIL>:e5)- EmailAddress:re
+        ACCUM
+            @@n_mismatch_edges += 1,
+            @@n_mismatch += (CASE
+                WHEN pe.email != re.email
+                 AND substring(pe.email, 2) != substring(re.email, 2)
+                THEN 1 ELSE 0 END);
+
+    @@fraud_density = (CASE WHEN @@n_txns > 0
+                           THEN 1.0 * @@n_fraud / @@n_txns ELSE 0.0 END);
+    @@mean_velocity = (CASE WHEN @@n_vel > 0
+                           THEN @@sum_vel / @@n_vel ELSE 0.0 END);
+    @@triangle_density = (CASE WHEN @@n_txns > 0
+                              THEN @@sum_tri / @@n_txns ELSE 0.0 END);
+    @@device_sharing_degree = (CASE WHEN @@n_txns > 0
+                                   THEN 1.0 * @@n_dev_txns / @@n_txns ELSE 0.0 END);
+    @@new_device_rate = (CASE WHEN @@n_dev_txns > 0
+                             THEN 1.0 * @@n_new_dev / @@n_dev_txns ELSE 0.0 END);
+    @@email_mismatch_rate = (CASE WHEN @@n_p > 0
+                                 THEN 1.0 * @@n_mismatch / @@n_p ELSE 0.0 END);
+
+    // Shannon entropy: computed in the SERVICE layer (no log() in GSQL 4.2).
+    @@fingerprint += @@fraud_density;
+    @@fingerprint += @@mean_velocity;
+    @@fingerprint += 0.0;   // [2] amt_entropy: service computes from @@bucket_hist
+    @@fingerprint += @@device_sharing_degree;
+    @@fingerprint += @@email_mismatch_rate;
+    @@fingerprint += @@triangle_density;
+    @@fingerprint += @@new_device_rate;
+
+    PRINT @@fingerprint AS fingerprint, @@bucket_hist AS amt_bucket_hist,
+          @@n_txns AS community_size, @@n_fraud AS fraud_txns;
+}
+
+// ----------------------------------------------------------------------------
+// q_fingerprint_case_set(pattern_id)
+// Same 7-D fingerprint over ALL transactions involved in closed cases of one
+// pattern - the documented-pattern centroid source. Called once per pattern
+// (and once with "none" for the cleared/legitimate centroid).
+// ----------------------------------------------------------------------------
+CREATE QUERY q_fingerprint_case_set(STRING pattern_id)
+FOR GRAPH SumoraFraudGraph {
+    SumAccum<INT>   @@n_txns, @@n_fraud, @@n_mismatch, @@n_new_dev, @@n_vel,
+                    @@n_dev_txns, @@n_p;
+    SumAccum<FLOAT> @@sum_vel, @@sum_tri;
+    SumAccum<FLOAT> @@fraud_density, @@mean_velocity, @@device_sharing_degree,
+                    @@email_mismatch_rate, @@triangle_density, @@new_device_rate;
+    MapAccum<FLOAT, INT> @@bucket_hist;
+    ListAccum<FLOAT> @@fingerprint;
+
+    ccs = {ClosedCase.*};
+    C = SELECT t
+        FROM ccs:cc -(INVOLVES>:e6)- Transaction:t
+        WHERE cc.pattern == pattern_id
+        ACCUM
+            @@n_txns += 1,
+            @@n_fraud += (CASE WHEN t.label_confirmed_fraud THEN 1 ELSE 0 END),
+            @@sum_tri += t.triangle_count;
+
+    amt = SELECT t
+        FROM C:t
+        ACCUM @@bucket_hist += (FLOOR(t.amt / 100.0) -> 1);
+
+    vel = SELECT t2
+        FROM C:t1 -(NEXT>:e7)- Transaction:t2
+        ACCUM @@n_vel += 1, @@sum_vel += (t2.txn_dt - t1.txn_dt);
+
+    dev = SELECT d
+        FROM C:t -(FROM_DEVICE>:e8)- DeviceProfile:d
+        ACCUM
+            @@n_dev_txns += 1,
+            @@n_new_dev += (CASE WHEN d.degree_norm <= 1 THEN 1 ELSE 0 END);
+
+    em = SELECT t
+        FROM C:t -(PURCHASER_EMAIL>:e9)- EmailAddress:pe
+        ACCUM @@n_p += 1;
+
+    emr = SELECT t
+        FROM C:t -(PURCHASER_EMAIL>:e10)- EmailAddress:pe , C:t -(RECIPIENT_EMAIL>:e11)- EmailAddress:re
+        ACCUM
+            @@n_mismatch += (CASE
+                WHEN substring(pe.email, 2) != substring(re.email, 2)
+                THEN 1 ELSE 0 END);
+
+    @@fraud_density = (CASE WHEN @@n_txns > 0
+                           THEN 1.0 * @@n_fraud / @@n_txns ELSE 0.0 END);
+    @@mean_velocity = (CASE WHEN @@n_vel > 0
+                           THEN @@sum_vel / @@n_vel ELSE 0.0 END);
+    @@triangle_density = (CASE WHEN @@n_txns > 0
+                              THEN @@sum_tri / @@n_txns ELSE 0.0 END);
+    @@device_sharing_degree = (CASE WHEN @@n_txns > 0
+                                   THEN 1.0 * @@n_dev_txns / @@n_txns ELSE 0.0 END);
+    @@new_device_rate = (CASE WHEN @@n_dev_txns > 0
+                             THEN 1.0 * @@n_new_dev / @@n_dev_txns ELSE 0.0 END);
+    @@email_mismatch_rate = (CASE WHEN @@n_p > 0
+                                 THEN 1.0 * @@n_mismatch / @@n_p ELSE 0.0 END);
+
+    // Shannon entropy over the $100-bucket histogram is computed in the SERVICE
+    // layer (GSQL has no log() on 4.2). The raw histogram is printed below;
+    // entropy occupies slot [2] of the fingerprint as a constant 0.0 placeholder
+    // so downstream consumers can rely on fixed positions.
+    @@fingerprint += @@fraud_density;
+    @@fingerprint += @@mean_velocity;
+    @@fingerprint += 0.0;   // [2] amt_entropy: service computes from @@bucket_hist
+    @@fingerprint += @@device_sharing_degree;
+    @@fingerprint += @@email_mismatch_rate;
+    @@fingerprint += @@triangle_density;
+    @@fingerprint += @@new_device_rate;
+
+    PRINT @@fingerprint AS fingerprint, @@bucket_hist AS amt_bucket_hist,
+          @@n_txns AS txn_count, @@n_fraud AS fraud_txns;
+}
+
+// ----------------------------------------------------------------------------
+// q_community_stats(min_size)
+// One row per Louvain community with >= min_size txns:
+//   (community_id, n_txns, n_fraud, density)
+// This is the candidate table: the service computes the mean/sigma z-score
+// filter AND the centroid L1 distances from these rows + fingerprint calls,
+// then runs the permutation test (negative control) before naming anything.
+// ----------------------------------------------------------------------------
+
+CREATE QUERY q_community_stats(INT min_size = 8)
+FOR GRAPH SumoraFraudGraph {
+    // Grouping via MapAccum (key -> running sum): portable across TG versions,
+    // no PER/GROUP-BY version dependence. The final FOREACH runs once (single-
+    // vertex SELECT) to emit one tuple per qualifying community.
+    MapAccum<INT, INT> @@n_by_comm, @@fraud_by_comm;
+    BagAccum<STRING> @@communities;   // "cid|n_txns|n_fraud|density"
+
+    txns = {Transaction.*};
+    C = SELECT t
+        FROM txns:t
+        WHERE t.louvain_community > 0
+        ACCUM
+            @@n_by_comm += (t.louvain_community -> 1),
+            @@fraud_by_comm += (t.louvain_community ->
+                (CASE WHEN t.label_confirmed_fraud THEN 1 ELSE 0 END));
+
+    any_v = SELECT t
+        FROM txns:t
+        POST-ACCUM
+            FOREACH (cid, n) IN @@n_by_comm DO
+                IF n >= min_size AND @@fraud_by_comm.containsKey(cid) THEN
+                    @@communities += tostring(cid) + "|" + tostring(n) + "|"
+                                     + tostring(@@fraud_by_comm.get(cid)) + "|"
+                                     + tostring(1.0 * @@fraud_by_comm.get(cid) / n)
+                END
+            END
+        LIMIT 1;
+
+    PRINT @@communities AS communities;
+}

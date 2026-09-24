@@ -1,0 +1,11 @@
+fastapi==0.141.1
+httpx==0.28.1
+joblib==1.6.0
+jsonschema>=4.20,<5
+langgraph==1.2.11
+numpy==2.4.6
+pydantic==2.13.5
+PyYAML==6.0.3
+scikit-learn==1.9.1
+tigergraph-mcp==1.0.3
+uvicorn==0.53.0

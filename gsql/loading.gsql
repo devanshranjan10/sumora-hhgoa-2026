@@ -1,0 +1,263 @@
+// ============================================================================
+// Sumora - loading jobs (TigerGraph 4.2)
+USE GRAPH SumoraFraudGraph
+// All CSVs are preprocessed by scripts/prep_load_data.py first: the loader
+// grammar has no string concatenation or IIF(), so every derived column
+// (card_key, email_p, email_r, cluster_key, dp_key, prior_score, trigger_tag)
+// is materialized in the prepped CSVs and referenced as a plain $"col" here.
+//
+// Files (mounted at /home/tigergraph/data_in/HHGOA_IEEE/prepped/):
+//   transactions.csv  case_pack.csv  identity.csv  closed_cases_history.csv
+//
+// prep (fill_cols in scripts/prep_load_data.py) guarantees non-empty, clean
+// cells, and the loader string-converts tokens to the attribute's declared
+// type (FLOAT/INT/DATETIME) automatically. WHERE clauses skip rows that would
+// create bogus empty-key vertices/edges.
+// ============================================================================
+
+// ------------------------------ transactions.csv ----------------------------
+// One LOAD per target so empty-cell guards can differ per target.
+
+CREATE LOADING JOB job_load_transactions FOR GRAPH SumoraFraudGraph {
+    DEFINE FILENAME f_transactions = "/home/tigergraph/data_in/HHGOA_IEEE/prepped/transactions.csv";
+
+    LOAD f_transactions
+      TO VERTEX Customer VALUES ($"customer_id", _, _, _, _, _)
+      USING header="true", separator=",", quote="double", eol="\n";
+
+    // Card vertex: authoritative K-id where a supplied case establishes it;
+    // otherwise a stable fingerprint U-id for an unverified card.
+    LOAD f_transactions
+      TO VERTEX Card VALUES (
+        $"card_key",
+        $"card2", $"card3",
+        $"card4", $"card5", $"card6",
+        0, 0, _, _, _, _, _, _, _)
+      USING header="true", separator=",", quote="double", eol="\n";
+
+    LOAD f_transactions
+      TO EDGE OWNS VALUES ($"customer_id", $"card_key")
+      USING header="true", separator=",", quote="double", eol="\n";
+
+    LOAD f_transactions
+      TO EDGE MADE VALUES ($"card_key", $"TransactionID", _)
+      USING header="true", separator=",", quote="double", eol="\n";
+
+    LOAD f_transactions
+      TO VERTEX Transaction VALUES (
+        $"TransactionID",                       // PRIMARY_ID
+        $"ts",                                  // DATETIME (auto-convert)
+        $"TransactionDT",     // txn_dt (IEEE-CIS offset)
+        $"card1",               // card1 (cluster-key rebuild)
+        $"TransactionAmt",    // amt
+        $"risk_score",
+        $"channel", $"ProductCD",
+        $"dist1", $"dist2",
+        $"C1",  $"C2",
+        $"C3",  $"C4",
+        $"C5",  $"C6",
+        $"C7",  $"C8",
+        $"C9",  $"C10",
+        $"C11", $"C12",
+        $"C13", $"C14",
+        $"D1",  $"D2",
+        $"D3",  $"D4",
+        $"D5",  $"D6",
+        $"D7",  $"D8",
+        $"D9",  $"D10",
+        $"D11", $"D12",
+        $"D13", $"D14",
+        $"D15",
+        $"M1", $"M2", $"M3", $"M4", $"M5", $"M6", $"M7", $"M8", $"M9",
+        // selected V features (30 of 339 - see schema.gsql header)
+        $"V12",  $"V29",
+        $"V45",  $"V53",
+        $"V57",  $"V62",
+        $"V65",  $"V70",
+        $"V75",  $"V94",
+        $"V95",  $"V96",
+        $"V97",  $"V101",
+        $"V102", $"V107",
+        $"V127", $"V128",
+        $"V130", $"V131",
+        $"V137", $"V187",
+        $"V200", $"V201",
+        $"V258", $"V279",
+        $"V294", $"V307",
+        $"V308", $"V310",
+        "false",                                // label_confirmed_fraud (BOOL;
+                                                // loader string-converts; set
+                                                // true by job_propagate_case_labels)
+        _, _, _, _, _, _, _)                    // algorithm attrs (defaults)
+      USING header="true", separator=",", quote="double", eol="\n";
+}
+
+CREATE LOADING JOB job_load_next FOR GRAPH SumoraFraudGraph {
+    DEFINE FILENAME f_next = "/home/tigergraph/data_in/HHGOA_IEEE/prepped/next_edges.csv";
+    LOAD f_next
+      TO EDGE NEXT VALUES ($"from_txn", $"to_txn", 1)
+      USING header="true", separator=",", eol="\n";
+}
+
+// Email / region edges - separate LOAD statements so empty cells can be
+// skipped with WHERE (an edge to an empty-string vertex would be wrong).
+CREATE LOADING JOB job_load_txn_edges FOR GRAPH SumoraFraudGraph {
+    DEFINE FILENAME f_transactions = "/home/tigergraph/data_in/HHGOA_IEEE/prepped/transactions.csv";
+
+    // Purchaser email (email_p = "p:<domain>", prepped; empty when absent).
+    LOAD f_transactions
+      TO VERTEX EmailAddress VALUES ($"email_p", _, _, _, _),
+      TO VERTEX EmailDomain  VALUES ($"p_domain", _, _, _, _),
+      TO EDGE PURCHASER_EMAIL VALUES ($"TransactionID", $"email_p"),
+      TO EDGE ON_DOMAIN VALUES ($"email_p", $"p_domain")
+      WHERE trim($"email_p") != ""
+      USING header="true", separator=",", quote="double", eol="\n";
+
+    // Recipient email (email_r = "r:<domain>", prepped).
+    LOAD f_transactions
+      TO VERTEX EmailAddress VALUES ($"email_r", _, _, _, _),
+      TO VERTEX EmailDomain  VALUES ($"r_domain", _, _, _, _),
+      TO EDGE RECIPIENT_EMAIL VALUES ($"TransactionID", $"email_r"),
+      TO EDGE ON_DOMAIN VALUES ($"email_r", $"r_domain")
+      WHERE trim($"email_r") != ""
+      USING header="true", separator=",", quote="double", eol="\n";
+
+    LOAD f_transactions
+      TO VERTEX BillingRegion VALUES ($"addr1_s", _, _, _, _),
+      TO EDGE BILLED_IN VALUES ($"TransactionID", $"addr1_s")
+      WHERE trim($"addr1_s") != ""
+      USING header="true", separator=",", quote="double", eol="\n";
+
+    // IdentityCluster "magic UID": cluster_key = "IC:card1|addr1|P_emaildomain"
+    // (prepped; empty when addr1 or domain missing). The Card->cluster edge is
+    // upserted per row - same (card,cluster) key overwrites, loader dedupes.
+    LOAD f_transactions
+      TO VERTEX IdentityCluster VALUES (
+        $"cluster_key",
+        $"card1", $"addr1_s",
+        $"p_domain", 0, 0, _, _),
+      TO EDGE IN_CLUSTER VALUES ($"card_key", $"cluster_key")
+      WHERE trim($"cluster_key") != ""
+      USING header="true", separator=",", quote="double", eol="\n";
+}
+
+// ------------------------------ identity.csv --------------------------------
+// Header (verified): TransactionID,id_01..id_38,DeviceType,DeviceInfo (41 cols)
+// Only ~13% of rows have a DeviceInfo - those are the online/CNP records.
+// dp_key = "DP:DeviceInfo|id_31|id_33" (device+browser+screen, per README's
+// device-profile definition); id_30 lands in os. Empty dp_key rows are skipped.
+
+CREATE LOADING JOB job_load_identity FOR GRAPH SumoraFraudGraph {
+    DEFINE FILENAME f_identity = "/home/tigergraph/data_in/HHGOA_IEEE/prepped/identity.csv";
+
+    LOAD f_identity
+      TO VERTEX DeviceProfile VALUES (
+        $"dp_key",
+        $"DeviceInfo",                          // device_info (prepped-trimmed source;
+                                                // a DeviceProfile id only exists when
+                                                // DeviceInfo was usable)
+        $"id_30",                               // os
+        $"id_31",                               // browser
+        $"id_33",                               // screen
+        0, 0, _, _, _, _)
+      WHERE trim($"dp_key") != ""
+      USING header="true", separator=",", quote="double", eol="\n";
+
+    LOAD f_identity
+      TO EDGE FROM_DEVICE VALUES ($"TransactionID", $"dp_key", _)
+      WHERE trim($"dp_key") != ""
+      USING header="true", separator=",", quote="double", eol="\n";
+
+    // id_35 ("New"/"Found" = device new for this account) stays derivable:
+    // q_new_device_cnp_score re-reads it from the identity row via the
+    // TransactionID join performed in the service layer. Kept out of v1.
+}
+
+// -------------------------- closed_cases_history.csv ------------------------
+// Header (verified): case_id,customer_id,card_id,opened_at,closed_at,outcome,
+// pattern,first_fraud_txn_id,txn_ids,n_txns,exposure_usd,connected_card_ids,
+// actions_taken,report_filed,analyst_notes    (15 cols; txn_ids pipe-separated,
+// analyst_notes quoted)
+
+CREATE LOADING JOB job_load_closed_cases FOR GRAPH SumoraFraudGraph {
+    DEFINE FILENAME f_cases = "/home/tigergraph/data_in/HHGOA_IEEE/prepped/closed_cases_history.csv";
+
+    LOAD f_cases
+      TO VERTEX ClosedCase VALUES (
+        $"case_id", $"customer_id", $"card_id",
+        $"opened_at", $"closed_at",               // DATETIME auto-convert
+        $"outcome", $"pattern", $"first_fraud_txn_id",
+        $"n_txns", $"exposure_usd",
+        $"actions_taken", $"report_filed", $"analyst_notes"),
+      TO EDGE ON_CARD VALUES ($"case_id", $"card_id")
+      USING header="true", separator=",", quote="double", eol="\n";
+
+    // CONNECTED_TO edges to pipe-separated connected_card_ids.
+    // flatten() emits one TEMP_TABLE row per split value; limit 8 caps it.
+    LOAD f_cases
+      TO TEMP_TABLE t_conn (cid, card) VALUES
+        ($"case_id", flatten($"connected_card_ids", "|", 1))
+      WHERE $"connected_card_ids" != ""
+      USING header="true", separator=",", quote="double", eol="\n";
+    // Up to 8 connected cards per case (observed max is lower; raise if the
+    // file ever grows wider). Empty slots are filtered by the t_conn load below.
+
+    LOAD TEMP_TABLE t_conn
+      TO EDGE CONNECTED_TO VALUES ($"cid", $"card")
+      WHERE $"card" != "";
+}
+
+CREATE LOADING JOB job_load_closed_case_edges FOR GRAPH SumoraFraudGraph {
+    DEFINE FILENAME f_cases = "/home/tigergraph/data_in/HHGOA_IEEE/prepped/closed_cases_history.csv";
+
+    // txn_ids is pipe-separated; INVOLVES one edge per token (up to 16).
+    LOAD f_cases
+      TO TEMP_TABLE t_inv (cid, txn) VALUES
+        ($"case_id", flatten($"txn_ids", "|", 1))
+      WHERE $"txn_ids" != ""
+      USING header="true", separator=",", quote="double", eol="\n";
+
+    LOAD TEMP_TABLE t_inv
+      TO EDGE INVOLVES VALUES ($"cid", $"txn")
+      WHERE $"txn" != "";
+}
+
+// ------------------------------- case_pack.csv ------------------------------
+// Header (verified): case_id,opened_at,trigger_type,trigger_text,
+// flagged_txn_id,card_id,customer_id,risk_score      (8 cols)
+// prepped adds: prior_score (0.0 when risk_score empty), trigger_tag.
+// Loads the 20 exam alerts as FraudCase vertices (status=open) so the agent's
+// first act per case is an UPDATE, not a create; INVESTIGATES edge to the
+// flagged txn is the investigation's anchor.
+
+// Seeds FraudPattern vertices from the distinct pattern values actually
+// present in the closed-case history; documented flags come from the policy's
+// fixed list. job_compute_pattern_priors (jobs.gsql) then fills the priors.
+CREATE LOADING JOB job_seed_patterns FOR GRAPH SumoraFraudGraph {
+    DEFINE FILENAME f_cases = "/home/tigergraph/data_in/HHGOA_IEEE/prepped/closed_cases_history.csv";
+
+    LOAD f_cases
+      TO VERTEX FraudPattern VALUES ($"pattern", $"pattern", "true", _, _)
+      WHERE $"pattern" IN ("card_testing", "card_not_present_fraud",
+                           "card_not_present_new_device", "out_of_region_use",
+                           "account_takeover"),
+      TO VERTEX FraudPattern VALUES ($"pattern", $"pattern", "false", _, _)
+      WHERE NOT $"pattern" IN ("card_testing", "card_not_present_fraud",
+                               "card_not_present_new_device", "out_of_region_use",
+                               "account_takeover")
+      USING header="true", separator=",", quote="double", eol="\n";
+}
+
+CREATE LOADING JOB job_load_case_pack FOR GRAPH SumoraFraudGraph {
+    DEFINE FILENAME f_pack = "/home/tigergraph/data_in/HHGOA_IEEE/prepped/case_pack.csv";
+
+    LOAD f_pack
+      TO VERTEX FraudCase VALUES (
+        $"case_id", "open", "uncertain",
+        $"prior_score",        // prior only; calibrator overwrites
+        "none", "", 0.0, $"trigger_text",        // trigger_text parked in summary
+        $"opened_at", $"opened_at",              // closed_ts placeholder
+        $"trigger_tag"),
+      TO EDGE INVESTIGATES VALUES ($"case_id", $"flagged_txn_id")
+      USING header="true", separator=",", quote="double", eol="\n";
+}

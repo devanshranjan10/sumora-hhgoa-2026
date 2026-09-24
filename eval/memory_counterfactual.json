@@ -1,0 +1,214 @@
+{
+  "n_cases": 20,
+  "k_permutation_draws": 20,
+  "real_vs_withheld": {
+    "verdict_changes": 1,
+    "nba_changes": 1,
+    "mean_abs_dp": 0.0575
+  },
+  "null_distribution_verdict_changes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "null_mean_abs_dp_p95": 0.089,
+  "permutation_p_value": 0.75,
+  "rows_real": {
+    "HHG-001": {
+      "verdict": "fraud",
+      "p": 0.94,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE"
+      ],
+      "sar": false
+    },
+    "HHG-002": {
+      "verdict": "fraud",
+      "p": 0.93,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE"
+      ],
+      "sar": false
+    },
+    "HHG-003": {
+      "verdict": "fraud",
+      "p": 0.93,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE"
+      ],
+      "sar": false
+    },
+    "HHG-004": {
+      "verdict": "fraud",
+      "p": 0.93,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE"
+      ],
+      "sar": false
+    },
+    "HHG-005": {
+      "verdict": "uncertain",
+      "p": 0.38,
+      "nba": [
+        "MONITOR_CARD"
+      ],
+      "sar": false
+    },
+    "HHG-006": {
+      "verdict": "uncertain",
+      "p": 0.83,
+      "nba": [
+        "MONITOR_CARD"
+      ],
+      "sar": false
+    },
+    "HHG-007": {
+      "verdict": "fraud",
+      "p": 0.94,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE"
+      ],
+      "sar": false
+    },
+    "HHG-008": {
+      "verdict": "fraud",
+      "p": 0.93,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE"
+      ],
+      "sar": false
+    },
+    "HHG-009": {
+      "verdict": "uncertain",
+      "p": 0.35,
+      "nba": [
+        "MONITOR_CARD"
+      ],
+      "sar": false
+    },
+    "HHG-010": {
+      "verdict": "uncertain",
+      "p": 0.83,
+      "nba": [
+        "MONITOR_CARD",
+        "ESCALATE_TO_ANALYST"
+      ],
+      "sar": false
+    },
+    "HHG-011": {
+      "verdict": "fraud",
+      "p": 0.93,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE"
+      ],
+      "sar": false
+    },
+    "HHG-012": {
+      "verdict": "fraud",
+      "p": 0.94,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE"
+      ],
+      "sar": false
+    },
+    "HHG-013": {
+      "verdict": "fraud",
+      "p": 0.94,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE"
+      ],
+      "sar": false
+    },
+    "HHG-014": {
+      "verdict": "fraud",
+      "p": 0.94,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE",
+        "FILE_REPORT",
+        "MONITOR_CONNECTED_CARDS"
+      ],
+      "sar": true
+    },
+    "HHG-015": {
+      "verdict": "uncertain",
+      "p": 0.35,
+      "nba": [
+        "MONITOR_CARD",
+        "ESCALATE_TO_ANALYST"
+      ],
+      "sar": false
+    },
+    "HHG-016": {
+      "verdict": "fraud",
+      "p": 0.94,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE",
+        "FILE_REPORT",
+        "MONITOR_CONNECTED_CARDS"
+      ],
+      "sar": true
+    },
+    "HHG-017": {
+      "verdict": "uncertain",
+      "p": 0.69,
+      "nba": [
+        "MONITOR_CARD"
+      ],
+      "sar": false
+    },
+    "HHG-018": {
+      "verdict": "fraud",
+      "p": 0.93,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE"
+      ],
+      "sar": false
+    },
+    "HHG-019": {
+      "verdict": "uncertain",
+      "p": 0.36,
+      "nba": [
+        "MONITOR_CARD"
+      ],
+      "sar": false
+    },
+    "HHG-020": {
+      "verdict": "uncertain",
+      "p": 0.19,
+      "nba": [
+        "MONITOR_CARD"
+      ],
+      "sar": false
+    }
+  },
+  "headline": "Memory changed the verdict in 1/20 cases (NBA in 1/20), mean |dp| = 0.058; shuffled-memory null: [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] changes across 20 draws, p = 0.75."
+}

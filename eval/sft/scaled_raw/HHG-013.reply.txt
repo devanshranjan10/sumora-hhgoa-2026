@@ -1,0 +1,84 @@
+{
+  "case_id": "HHG-013",
+  "case": {
+    "status": "closed_legitimate",
+    "verdict": "legitimate",
+    "fraud_probability": 0.1,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "3526826",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 0.0,
+    "evidence": [
+      {
+        "claim": "The transaction was flagged by a risk score of 0.76, which is a weak signal.",
+        "source": "document",
+        "ref": "CASE:trigger_score",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "The transaction is a single, moderate-value online purchase.",
+        "source": "graph",
+        "ref": "transactions",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "The customer has a history of legitimate online and in-person transactions.",
+        "source": "graph",
+        "ref": "transactions",
+        "entity_ids": [
+          "C07671"
+        ]
+      },
+      {
+        "claim": "No evidence of a shared device, cluster, or other fraud indicators was found.",
+        "source": "graph",
+        "ref": "edges",
+        "entity_ids": [
+          "C07671-K2"
+        ]
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "The case was triggered by a moderate risk score (0.76) on a single online transaction. Investigation of the customer's history and graph connections revealed no evidence of fraud. The activity is consistent with the customer's normal spending patterns, and the alert is considered a false positive.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "no fraud evidence"
+      }
+    ],
+    "final": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "no fraud evidence"
+      }
+    ],
+    "what_changed": "none: decision unchanged after evidence review"
+  },
+  "sar": {
+    "file": false,
+    "reason": "No fraud was confirmed or strongly suspected.",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0.0,
+    "activity_dates": []
+  },
+  "stop_reason": "Fraud probability is <= 0.15 (0.10) and is supported by multiple independent evidence pieces (customer history, lack of shared fraud signals).",
+  "tool_calls": 4,
+  "tokens": 1366,
+  "latency_s": 0.0
+}

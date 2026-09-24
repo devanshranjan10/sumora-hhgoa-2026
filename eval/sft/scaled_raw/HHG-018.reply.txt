@@ -1,0 +1,84 @@
+{
+  "case_id": "HHG-018",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3491361"
+    ],
+    "first_suspicious_txn_id": "3491361",
+    "connected_card_ids": [
+      "C02354-K1"
+    ],
+    "connected_device_profiles": [
+      "DP:Z981 Build/MMB29M|chrome 62.0 for android|1920x1080"
+    ],
+    "connected_device_profiles": [],
+    "exposure_usd": 39.08,
+    "evidence": [
+      {
+        "claim": "Customer explicitly denied making the transaction.",
+        "source": "customer",
+        "ref": "trigger_text",
+        "entity_ids": [
+          "C02354",
+          "3491361"
+        ]
+      },
+      {
+        "claim": "The transaction was a Card-Not-Present (online) purchase.",
+        "source": "graph",
+        "ref": "transactions",
+        "entity_ids": [
+          "3491361"
+        ]
+      },
+      {
+        "claim": "The transaction originated from a device profile not previously associated with the customer.",
+        "source": "graph",
+        "ref": "edges",
+        "entity_ids": [
+          "C02354-K1",
+          "DP:Z981 Build/MMB29M|chrome 62.0 for android|1920x1080"
+        ]
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "The customer reported a $39.08 online transaction they did not authorize. Graph analysis confirms the transaction was a Card-Not-Present purchase from a device profile not previously associated with the customer. The evidence strongly supports a verdict of fraud.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "what_changed": "none: decision unchanged after evidence review"
+  },
+  "sar": {
+    "file": false,
+    "reason": "SAR not required. Fraud is confirmed, but exposure is < $1,000, the case does not connect to a shared device or other known fraud, and it fits a documented pattern.",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 39.08,
+    "activity_dates": []
+  },
+  "stop_reason": "Customer verification response confirmed the transaction was fraudulent, settling the case.",
+  "tool_calls": 4,
+  "tokens": 1466,
+  "latency_s": 0.0
+}

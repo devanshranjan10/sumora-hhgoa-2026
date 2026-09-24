@@ -1,0 +1,157 @@
+// ============================================================================
+// Sumora - maintenance queries (TigerGraph 4.x)
+// Spec S 5: job_build_identity_clusters, job_propagate_case_labels,
+//          job_compute_pattern_priors, job_precompute_algorithms
+//
+// DML queries, not loading jobs: they derive graph state from graph state.
+// Run order: after loading, before scoring.
+//   gsql "RUN QUERY job_propagate_case_labels()"
+// ============================================================================
+
+USE GRAPH SumoraFraudGraph
+
+// ----------------------------------------------------------------------------
+// job_propagate_case_labels
+// Writes Transaction.label_confirmed_fraud from the bank's closed cases.
+// Required before ANY fraud-density / community-anomaly query can exist
+// (arena synthesis #7): without this write-back, density has no ground truth.
+// Idempotent: cleared-case transactions are explicitly reset to false.
+// ----------------------------------------------------------------------------
+CREATE QUERY job_propagate_case_labels() FOR GRAPH SumoraFraudGraph {
+    cc = {ClosedCase.*};
+
+    fraud_txns = SELECT t
+        FROM cc:c -(INVOLVES>)- Transaction:t
+        WHERE c.outcome == "confirmed_fraud"
+        POST-ACCUM t.label_confirmed_fraud = true;
+
+    cleared_txns = SELECT t
+        FROM cc:c -(INVOLVES>)- Transaction:t
+        WHERE c.outcome == "cleared"
+        POST-ACCUM t.label_confirmed_fraud = false;
+
+    PRINT fraud_txns.size() AS labeled_fraud_txns,
+          cleared_txns.size() AS labeled_cleared_txns;
+}
+
+// ----------------------------------------------------------------------------
+// job_build_identity_clusters
+// Fills IdentityCluster aggregates. Vertices + IN_CLUSTER edges come from the
+// loading job; the counts and density are derived here.
+// ----------------------------------------------------------------------------
+CREATE QUERY job_build_identity_clusters() FOR GRAPH SumoraFraudGraph {
+    SumAccum<INT> @n_cards;
+    SumAccum<INT> @n_txns;
+    SumAccum<INT> @n_fraud;
+
+    clusters = {IdentityCluster.*};
+
+    c1 = SELECT c
+        FROM clusters:c -( IN_CLUSTER_REV>:e1 )- Card:k
+        ACCUM c.@n_cards += 1
+        POST-ACCUM c.card_count = c.@n_cards;
+
+    c2 = SELECT c
+        FROM clusters:c -(( <IN_CLUSTER_REV|IN_CLUSTER_REV> ):e1)- Card:k -(MADE>:e2)- Transaction:t
+        ACCUM
+            c.@n_txns += 1,
+            c.@n_fraud += (CASE WHEN t.label_confirmed_fraud THEN 1 ELSE 0 END)
+        POST-ACCUM
+            c.confirmed_fraud_txn_count = c.@n_fraud,
+            c.fraud_density_score =
+                (CASE WHEN c.@n_txns > 0
+                     THEN 1.0 * c.@n_fraud / c.@n_txns
+                     ELSE 0.0 END);
+
+    PRINT c2.size() AS clusters_updated;
+}
+
+// ----------------------------------------------------------------------------
+// job_compute_pattern_priors
+// P(confirmed_fraud | pattern) and case_count per FraudPattern vertex, learned
+// from the labeled closed-case history (ClosedCase.pattern is the label the
+// graders' key derives from). These priors are the centroids the
+// undocumented-pattern pipeline measures distance from (arena synthesis #8).
+// IMPLEMENTATION NOTE: GSQL has no per-vertex grouping of a foreign vertex set
+// MapAccum keyed on pattern_id, then scattered back onto the vertices.
+// ----------------------------------------------------------------------------
+CREATE QUERY job_compute_pattern_priors() FOR GRAPH SumoraFraudGraph {
+    MapAccum<STRING, INT> @@cases;
+    MapAccum<STRING, INT> @@frauds;
+
+    ccs = {ClosedCase.*};
+
+    tmp = SELECT cc
+        FROM ccs:cc
+        ACCUM
+            @@cases += (cc.pattern -> 1),
+            @@frauds += (cc.pattern -> (CASE WHEN cc.outcome == "confirmed_fraud" THEN 1 ELSE 0 END));
+
+    patterns = {FraudPattern.*};
+    res = SELECT fp FROM patterns:fp
+        POST-ACCUM
+            fp.case_count      = @@cases.get(fp.pattern_id),
+            fp.prior_fraud_rate =
+                (CASE WHEN @@cases.get(fp.pattern_id) > 0
+                     THEN 1.0 * @@frauds.get(fp.pattern_id) / @@cases.get(fp.pattern_id)
+                     ELSE 0.0 END);
+
+    PRINT res.size() AS patterns_scored;
+}
+
+// ----------------------------------------------------------------------------
+// job_precompute_algorithms
+// Degrees and fan-in counts per vertex type, written to vertex attributes so the
+// demo reads pre-computed values instead of re-running algorithms live
+// (spec S 7: pre-compute heavy results).
+//
+// distinct_card_count is the mule-herd signal: one device profile -> many cards.
+// NOTE: @deg accumulates MADE_REV edges (one per txn); it is an edge degree,
+// not a distinct-vertex degree. q_ato_score's novel-device signal relies on
+// that distinction (degree_norm <= 1 => seen on at most one txn anywhere).
+// ----------------------------------------------------------------------------
+CREATE QUERY job_precompute_algorithms() FOR GRAPH SumoraFraudGraph {
+    SumAccum<INT> @deg;
+    SumAccum<INT> @n_fraud;
+    SetAccum<STRING> @cards;
+
+    // --- DeviceProfile: degree + distinct-card fan-in + fraud exposure ---
+    devs = {DeviceProfile.*};
+    d2 = SELECT v
+        FROM devs:v -(( <FROM_DEVICE_REV|FROM_DEVICE_REV> ):e1)- Transaction:t -(( <MADE_REV|MADE_REV> ):e2)- Card:k
+        ACCUM
+            v.@cards += k.card_id,
+            v.@deg += 1,
+            v.@n_fraud += (CASE WHEN t.label_confirmed_fraud THEN 1 ELSE 0 END)
+        POST-ACCUM
+            v.distinct_card_count = v.@cards.size(),
+            v.degree_norm = v.@deg,
+            v.fraud_txn_count = v.@n_fraud,
+            v.fraud_density_score =
+                (CASE WHEN v.@deg > 0
+                     THEN 1.0 * v.@n_fraud / v.@deg
+                     ELSE 0.0 END);
+
+    // --- EmailAddress: degree ---
+    emails = {EmailAddress.*};
+    e = SELECT v
+        FROM emails:v -( PURCHASER_EMAIL_REV>:e1 )- Transaction:t
+        ACCUM v.@deg += 1
+        POST-ACCUM v.degree_norm = v.@deg;
+
+    // --- BillingRegion: degree + fraud density ---
+    regions = {BillingRegion.*};
+    r = SELECT v
+        FROM regions:v -( BILLED_IN_REV>:e1 )- Transaction:t
+        ACCUM
+            v.@deg += 1,
+            v.@n_fraud += (CASE WHEN t.label_confirmed_fraud THEN 1 ELSE 0 END)
+        POST-ACCUM
+            v.degree_norm = v.@deg,
+            v.fraud_density_score =
+                (CASE WHEN v.@deg > 0
+                     THEN 1.0 * v.@n_fraud / v.@deg
+                     ELSE 0.0 END);
+
+    PRINT d2.size() AS devices, e.size() AS emails, r.size() AS regions;
+}

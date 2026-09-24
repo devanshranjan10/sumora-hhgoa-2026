@@ -1,0 +1,82 @@
+{
+  "case_id": "HHG-009",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3581141"
+    ],
+    "first_suspicious_txn_id": "3581141",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 30.02,
+    "evidence": [
+      {
+        "claim": "Customer explicitly denied making the transaction.",
+        "source": "customer",
+        "ref": "trigger_text",
+        "entity_ids": [
+          "C08299",
+          "3581141"
+        ]
+      },
+      {
+        "claim": "The transaction was made from a device profile not previously associated with the customer.",
+        "source": "graph",
+        "ref": "edges",
+        "entity_ids": [
+          "C08299-K1",
+          "DP:Trident/7.0|ie 11.0 for desktop|1600x900"
+        ]
+      },
+      {
+        "claim": "The transaction was made from a device profile linked to a cluster with a high concentration of fraud.",
+        "source": "graph",
+        "ref": "edges",
+        "entity_ids": [
+          "C08299-K1",
+          "IC:13026"
+        ]
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "The customer reported a $30.02 online transaction they did not authorize. Graph analysis revealed the transaction originated from a device profile new to the customer and linked to a cluster with a high concentration of fraudulent activity. This strongly indicates the card details were compromised and used for card-not-present fraud.",
+    "next_best_actions": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2: Customer denies the transaction"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "auto",
+        "reason": "R2: Fraud is confirmed and connects to a shared device profile linked to other fraud."
+      }
+    ],
+    "sar": {
+      "file": true,
+      "reason": "R2, SAR Policy: Fraud is confirmed and connects to a shared device profile linked to other fraud.",
+      "narrative": "Customer C08299 reported a fraudulent online transaction of $30.02 on card C08299-K1. The transaction was made on 2016-12-28. Investigation revealed the transaction originated from a device profile not previously associated with the customer and was linked to a cluster (IC:13026) with a high concentration of fraudulent activity. This indicates the card details were compromised and used for card-not-present fraud.",
+      "subjects": [
+        "C08299"
+      ],
+      "total_amount_usd": 30.02,
+      "activity_dates": [
+        "2016-12-28",
+        "2016-12-28"
+      ]
+    },
+    "stop_reason": "Customer verification response confirmed the transaction was fraudulent, settling the case.",
+    "tool_calls": 4,
+    "tokens": 1604,
+    "latency_s": 0.0
+}

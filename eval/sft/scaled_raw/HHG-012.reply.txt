@@ -1,0 +1,85 @@
+{
+  "case_id": "HHG-012",
+  "case": {
+    "status": "closed_legitimate",
+    "verdict": "legitimate",
+    "fraud_probability": 0.1,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "3553342",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 0.0,
+    "evidence": [
+      {
+        "claim": "The flagged transaction is a single, low-value, in-person purchase.",
+        "source": "graph",
+        "ref": "transaction:3553342",
+        "entity_ids": [
+          "3553342",
+          "C05876-K2"
+        ]
+      },
+      {
+        "claim": "The transaction's risk score is low (0.55), indicating a weak signal for fraud.",
+        "source": "graph",
+        "ref": "risk_score:0.55",
+        "entity_ids": [
+          "3553342"
+        ]
+      },
+      {
+        "claim": "The customer has a history of legitimate in-person transactions with similar values.",
+        "source": "graph",
+        "ref": "transactions",
+        "entity_ids": [
+          "C05876-K1"
+        ]
+      },
+      {
+        "claim": "No evidence of shared fraud indicators (e.g., device, cluster, region) was found.",
+        "source": "graph",
+        "ref": "edges, cluster_ids, device_ids",
+        "entity_ids": [
+          "C05876-K1"
+        ]
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "The case was triggered by a single, low-risk score on a $30.91 in-person transaction. The customer has a consistent history of legitimate in-person purchases, and no other indicators of fraud (e.g., shared device, cluster, or region) were found. The activity is assessed as legitimate.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "no fraud evidence"
+      }
+    ],
+    "final": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "no fraud evidence"
+      }
+    ],
+    "what_changed": "none: decision unchanged after evidence review"
+  },
+  "sar": {
+    "file": false,
+    "reason": "No fraud was confirmed or strongly suspected.",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0.0,
+    "activity_dates": []
+  },
+  "stop_reason": "Fraud probability is <= 0.15 (0.10) and is supported by multiple independent evidence pieces (customer history, low risk score, no shared fraud signals).",
+  "tool_calls": 4,
+  "tokens": 1440,
+  "latency_s": 0.0
+}

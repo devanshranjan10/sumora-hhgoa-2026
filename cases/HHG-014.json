@@ -1,0 +1,111 @@
+{
+  "case": {
+    "affected_txn_ids": [
+      "T3478561"
+    ],
+    "connected_card_ids": [
+      "C03528-K1",
+      "C06617-K1",
+      "C09733-K1",
+      "C09998-K1"
+    ],
+    "connected_device_profiles": [
+      "SM-G935F Build/NRD90M | Android 7.0 | chrome 62.0 for android | 1920x1080"
+    ],
+    "evidence": [
+      {
+        "claim": "Flagged transaction T3478561 ($74.96, online)",
+        "entity_ids": [
+          "T3478561"
+        ],
+        "ref": "q_evidence_pack",
+        "source": "graph"
+      },
+      {
+        "claim": "Device/structure links prior case(s) CC-3221, CC-3791, CC-2800",
+        "entity_ids": [
+          "CC-3221",
+          "CC-3791",
+          "CC-2800"
+        ],
+        "ref": "q_case_structural_similarity",
+        "source": "graph"
+      },
+      {
+        "claim": "Policy check (data/HHGOA_IEEE/README.md#Fraud Policy): # Fraud Policy\n\nVersion 1.0. This is the policy your agent operates under. Action names and approval routes in your case files must use the exact identifiers be",
+        "entity_ids": [],
+        "ref": "graphrag.retrieve",
+        "source": "document"
+      },
+      {
+        "claim": "Device fingerprint matches a Build/-qualified cross-account shared-device ring (permutation-tested; see eval/pattern_discovery.json)",
+        "entity_ids": [
+          "SM-G935F Build/NRD90M | Android 7.0 | chrome 62.0 for android | 1920x1080"
+        ],
+        "ref": "pattern_discovery:cross_account_device_ring",
+        "source": "graph"
+      }
+    ],
+    "exposure_usd": 74.96,
+    "first_suspicious_txn_id": "T3478561",
+    "fraud_probability": 0.6,
+    "graph_case_id": "HHG-014",
+    "pattern": "undocumented",
+    "pattern_description": "A Build-qualified device profile links confirmed-fraud cases across at least three distinct cardholders. This cross-account structure differs from a single-card behavioral burst. A shared profile is an investigative lead, not proof that one person controlled the accounts.",
+    "similar_prior_cases": [
+      "CC-2649",
+      "CC-2971",
+      "CC-2985",
+      "CC-3035",
+      "CC-3221",
+      "CC-3791",
+      "CC-2800"
+    ],
+    "status": "open",
+    "summary": "Trigger: analyst request on transaction T3478561 ($74.96, card C13487-K1). Findings: p=0.60 (90% CI 0.49-0.70), 4 evidence items. Pattern: undocumented. Stopping: an evidence request is pending; no customer or analyst response was invented. Actions: STEP_UP_AUTH -> MONITOR_CARD; approval in-line. Memory: 7 closed prior case(s) cited.",
+    "verdict": "uncertain",
+    "written_to_graph": true
+  },
+  "case_id": "HHG-014",
+  "evidence_requests": [
+    {
+      "asked_after_step": 2,
+      "assumed_response": "No response supplied; request pending",
+      "type": "step_up_auth"
+    }
+  ],
+  "latency_s": 16.611,
+  "next_best_actions": {
+    "final": [
+      {
+        "action": "STEP_UP_AUTH",
+        "reason": "evidence request has positive expected value ($2.29); fraud decision remains pending",
+        "route": "auto"
+      },
+      {
+        "action": "MONITOR_CARD",
+        "reason": "monitor while the requested evidence is pending",
+        "route": "auto"
+      }
+    ],
+    "initial": [
+      {
+        "action": "VERIFY_WITH_CUSTOMER",
+        "reason": "R1: single weak signal (p=0.60) - verify before any block",
+        "route": "auto"
+      }
+    ],
+    "what_changed": "Requested STEP_UP_AUTH before deciding; no response was supplied, so the fraud decision remains pending."
+  },
+  "sar": {
+    "activity_dates": [],
+    "file": false,
+    "narrative": "",
+    "reason": "3a: filing threshold not met; case only, no report",
+    "subjects": [],
+    "total_amount_usd": 0
+  },
+  "stop_reason": "awaiting_evidence_response:step_up_auth",
+  "tokens": 1800,
+  "tool_calls": 9
+}

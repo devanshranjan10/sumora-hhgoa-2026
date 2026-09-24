@@ -1,0 +1,164 @@
+{
+  "case_id": "HHG-902",
+  "steps": [
+    {
+      "step": "open_case",
+      "case_id": "HHG-902"
+    },
+    {
+      "step": "investigate",
+      "tools": [
+        "ato",
+        "card_testing",
+        "new_device_cnp",
+        "out_of_region",
+        "recurring"
+      ]
+    },
+    {
+      "step": "assess",
+      "p": 0.188,
+      "ci": [
+        0.132,
+        0.5
+      ]
+    },
+    {
+      "step": "gate",
+      "gather": false,
+      "action": "MONITOR_CARD",
+      "stop": "robust_optimal:MONITOR_CARD_for_all_p_in_ci"
+    },
+    {
+      "step": "propose",
+      "action": "MONITOR_CARD"
+    },
+    {
+      "step": "approval",
+      "route": "auto",
+      "approved": true,
+      "simulated": true
+    },
+    {
+      "step": "execute",
+      "action": "MONITOR_CARD",
+      "simulated": true
+    },
+    {
+      "step": "explain",
+      "llm": "EchoProvider"
+    },
+    {
+      "step": "update_memory",
+      "similar": 26
+    },
+    {
+      "step": "close"
+    }
+  ],
+  "tool_log": [
+    [
+      "q_evidence_pack",
+      260
+    ],
+    [
+      "q_case_structural_similarity",
+      220
+    ],
+    [
+      "q_card_testing_score",
+      180
+    ],
+    [
+      "q_new_device_cnp_score",
+      170
+    ],
+    [
+      "q_out_of_region_score",
+      170
+    ],
+    [
+      "q_ato_score",
+      170
+    ],
+    [
+      "q_recurring_entities",
+      190
+    ],
+    [
+      "q_case_feature_vector",
+      240
+    ]
+  ],
+  "p_final": 0.19,
+  "p_initial": 0.19,
+  "evsi_table": {
+    "customer_validation": -3.31,
+    "step_up_auth": -4.31,
+    "analyst_info": -9.31
+  },
+  "stop_reason": "robust_optimal:MONITOR_CARD_for_all_p_in_ci",
+  "evidence": [
+    {
+      "claim": "Flagged transaction T3425188 ($13.11, online)",
+      "source": "graph",
+      "ref": "q_evidence_pack",
+      "entity_ids": [
+        "T3425188"
+      ]
+    },
+    {
+      "claim": "Device/structure links prior case(s) CC-2394, CC-5187, CC-3749",
+      "source": "graph",
+      "ref": "q_case_structural_similarity",
+      "entity_ids": [
+        "CC-2394",
+        "CC-5187",
+        "CC-3749"
+      ]
+    },
+    {
+      "claim": "Policy check (data/HHGOA_IEEE/README.md#Fraud Policy): # Fraud Policy\n\nVersion 1.0. This is the policy your agent operates under. Action names and approval routes in your case files must use the exact identifiers be",
+      "source": "document",
+      "ref": "graphrag.retrieve",
+      "entity_ids": []
+    },
+    {
+      "claim": "Device fingerprint matches a Build/-qualified cross-account shared-device ring (permutation-tested; see eval/pattern_discovery.json)",
+      "source": "graph",
+      "ref": "pattern_discovery:cross_account_device_ring",
+      "entity_ids": [
+        "SM-J500M Build/LMY48B | chrome 64.0 for android"
+      ]
+    }
+  ],
+  "requests": [],
+  "similar_prior_cases": [
+    "CC-3308",
+    "CC-3524",
+    "CC-3553",
+    "CC-3564",
+    "CC-3597",
+    "CC-3713",
+    "CC-3746",
+    "CC-3749",
+    "CC-3760",
+    "CC-3798",
+    "CC-3814",
+    "CC-3816",
+    "CC-3827",
+    "CC-3855",
+    "CC-3876",
+    "CC-4396",
+    "CC-4479",
+    "CC-4510",
+    "CC-4598",
+    "CC-4661",
+    "CC-4725",
+    "CC-4761",
+    "CC-4832",
+    "CC-4985",
+    "CC-2394",
+    "CC-5187"
+  ]
+}

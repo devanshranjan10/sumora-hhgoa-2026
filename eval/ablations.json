@@ -1,0 +1,177 @@
+{
+  "full": {
+    "HHG-001": {
+      "verdict": "fraud",
+      "p": 0.94,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE"
+      ]
+    },
+    "HHG-002": {
+      "verdict": "fraud",
+      "p": 0.96,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE"
+      ]
+    },
+    "HHG-003": {
+      "verdict": "fraud",
+      "p": 0.94,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE"
+      ]
+    },
+    "HHG-004": {
+      "verdict": "uncertain",
+      "p": 0.7,
+      "nba": [
+        "MONITOR_CARD"
+      ]
+    },
+    "HHG-005": {
+      "verdict": "uncertain",
+      "p": 0.25,
+      "nba": [
+        "MONITOR_CARD"
+      ]
+    },
+    "HHG-006": {
+      "verdict": "uncertain",
+      "p": 0.41,
+      "nba": [
+        "MONITOR_CARD"
+      ]
+    },
+    "HHG-007": {
+      "verdict": "fraud",
+      "p": 0.94,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE"
+      ]
+    },
+    "HHG-008": {
+      "verdict": "uncertain",
+      "p": 0.83,
+      "nba": [
+        "MONITOR_CARD"
+      ]
+    },
+    "HHG-009": {
+      "verdict": "uncertain",
+      "p": 0.75,
+      "nba": [
+        "MONITOR_CARD"
+      ]
+    },
+    "HHG-010": {
+      "verdict": "fraud",
+      "p": 0.91,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE",
+        "FILE_REPORT",
+        "MONITOR_CONNECTED_CARDS"
+      ]
+    },
+    "HHG-011": {
+      "verdict": "uncertain",
+      "p": 0.7,
+      "nba": [
+        "MONITOR_CARD"
+      ]
+    },
+    "HHG-012": {
+      "verdict": "fraud",
+      "p": 0.91,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE"
+      ]
+    },
+    "HHG-013": {
+      "verdict": "uncertain",
+      "p": 0.75,
+      "nba": [
+        "MONITOR_CARD"
+      ]
+    },
+    "HHG-014": {
+      "verdict": "fraud",
+      "p": 0.91,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE",
+        "FILE_REPORT",
+        "MONITOR_CONNECTED_CARDS"
+      ]
+    },
+    "HHG-015": {
+      "verdict": "uncertain",
+      "p": 0.58,
+      "nba": [
+        "MONITOR_CARD",
+        "ESCALATE_TO_ANALYST"
+      ]
+    },
+    "HHG-016": {
+      "verdict": "fraud",
+      "p": 0.97,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE",
+        "FILE_REPORT",
+        "MONITOR_CONNECTED_CARDS"
+      ]
+    },
+    "HHG-017": {
+      "verdict": "uncertain",
+      "p": 0.75,
+      "nba": [
+        "MONITOR_CARD"
+      ]
+    },
+    "HHG-018": {
+      "verdict": "fraud",
+      "p": 0.94,
+      "nba": [
+        "BLOCK_CARD",
+        "CREATE_CASE"
+      ]
+    },
+    "HHG-019": {
+      "verdict": "uncertain",
+      "p": 0.58,
+      "nba": [
+        "MONITOR_CARD"
+      ]
+    },
+    "HHG-020": {
+      "verdict": "uncertain",
+      "p": 0.25,
+      "nba": [
+        "MONITOR_CARD"
+      ]
+    }
+  },
+  "ablations": {
+    "no-memory": {
+      "verdict_flips": 3,
+      "nba_changes": 3,
+      "mean_abs_dp": 0.0805
+    },
+    "no-calibration": {
+      "verdict_flips": 3,
+      "nba_changes": 3,
+      "mean_abs_dp": 0.0805
+    },
+    "no-graph": {
+      "verdict_flips": 7,
+      "nba_changes": 7,
+      "mean_abs_dp": 0.1635
+    }
+  }
+}

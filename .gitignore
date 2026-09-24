@@ -1,0 +1,17 @@
+data/
+answers/
+checkpoints/
+.env
+.freebuff/
+*.part
+__pycache__/
+node_modules/
+dist/
+*.tsbuildinfo
+.pytest_cache/
+.ruff_cache/
+.venv/
+.gstack/
+eval/traces/index.json
+eval/model_v2/historical_features.json
+graphrag/index.json

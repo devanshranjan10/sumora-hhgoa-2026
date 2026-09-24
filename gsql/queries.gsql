@@ -1,0 +1,643 @@
+// ============================================================================
+// Sumora - investigation primitives (TigerGraph 4.x)
+// Spec S 5 "Installed queries". These are the ~14 composed primitives the agent's
+// InvestigationTools facade exposes (arena synthesis #9: NOT the raw 60-tool MCP
+// surface - tool-selection accuracy collapses past ~20-30 tools).
+//
+// Every query is deterministic and returns structured JSON the LLM reasons over.
+//
+// Run order: schema.gsql -> loading.gsql -> (load data) -> jobs.gsql ->
+//            algorithms.gsql -> this file -> pattern_scorers.gsql -> discovery.gsql
+// Install:   gsql -g SumoraFraudGraph queries.gsql   (installs every query)
+// ============================================================================
+
+USE GRAPH SumoraFraudGraph
+
+// ----------------------------------------------------------------------------
+// q_khop_expand(start_txn, max_hops)
+// The neighborhood around a trigger transaction: card, device, emails, region,
+// then outward. Powers the first investigation step and the UI subgraph view.
+// ----------------------------------------------------------------------------
+CREATE QUERY q_khop_expand(STRING start_txn, INT max_hops = 2)
+FOR GRAPH SumoraFraudGraph {
+    OrAccum @visited;
+    SetAccum<STRING> @@txn_ids;
+    SetAccum<STRING> @@card_ids;
+    SetAccum<STRING> @@device_ids;
+    SetAccum<STRING> @@email_ids;
+    SetAccum<STRING> @@region_ids;
+    SumAccum<INT> @@hops;
+
+    seed = {Transaction.*};
+    S = SELECT s FROM seed:s
+        WHERE s.txn_id == start_txn
+        ACCUM s.@visited += true, @@txn_ids += s.txn_id;
+
+    result (ANY) = S;
+
+    // Expansion rounds: grow `result` across ALL relation types each round,
+    // then pull in neighboring transactions. Never alias the frontier onto a
+    // single type (that was the bug in the v1 loop: after the first hop S was
+    // a Card set, so FROM_DEVICE from S silently returned nothing).
+    WHILE @@hops < max_hops DO
+        @@hops += 1;
+
+        S_card = SELECT k
+            FROM result:r -((MADE>|MADE_REV>):e1)- Card:k
+            WHERE k.@visited == false
+            ACCUM k.@visited += true, @@card_ids += k.card_id;
+
+        S_dev = SELECT d
+            FROM result:r -((FROM_DEVICE>|FROM_DEVICE_REV>):e2)- DeviceProfile:d
+            WHERE d.@visited == false
+            ACCUM d.@visited += true, @@device_ids += d.profile_id;
+
+        S_em = SELECT e
+            FROM result:r -((PURCHASER_EMAIL>|PURCHASER_EMAIL_REV>|RECIPIENT_EMAIL>|RECIPIENT_EMAIL_REV>):e3)- EmailAddress:e
+            WHERE e.@visited == false
+            ACCUM e.@visited += true, @@email_ids += e.email;
+
+        S_reg = SELECT g
+            FROM result:r -((BILLED_IN>|BILLED_IN_REV>):e4)- BillingRegion:g
+            WHERE g.@visited == false
+            ACCUM g.@visited += true, @@region_ids += g.region_id;
+
+        result = result UNION S_card UNION S_dev UNION S_em UNION S_reg;
+
+        S_txn = SELECT t
+            FROM result:r -((MADE>|FROM_DEVICE_REV>|PURCHASER_EMAIL_REV>|RECIPIENT_EMAIL_REV>|BILLED_IN_REV>|IN_CLUSTER_REV>):e5)- Transaction:t
+            WHERE t.@visited == false
+            ACCUM t.@visited += true, @@txn_ids += t.txn_id;
+
+        result = result UNION S_txn;
+    END;
+
+    PRINT @@txn_ids AS txn_ids, @@card_ids AS card_ids,
+          @@device_ids AS device_ids, @@email_ids AS email_ids,
+          @@region_ids AS region_ids;
+}
+
+// ----------------------------------------------------------------------------
+// q_shared_attributes(customer_id)
+// Which other customers/cards share this customer's devices, emails, regions?
+// This is the "only solved by asking what happened on OTHER cards" query
+// (README "Things to know"), and the base for shared-origin rule R6.
+// ----------------------------------------------------------------------------
+CREATE QUERY q_shared_attributes(STRING customer_id)
+FOR GRAPH SumoraFraudGraph {
+    SetAccum<STRING> @@my_cards;
+    SetAccum<STRING> @@my_devices;
+    SetAccum<STRING> @@my_emails;
+    SetAccum<STRING> @@other_cards;
+    SetAccum<STRING> @@other_customers;
+
+    me = {Customer.*};
+    mine = SELECT c
+        FROM me:c -(OWNS>:e6)- Card:k
+        WHERE c.customer_id == customer_id
+        ACCUM @@my_cards += k.card_id;
+
+    cards = {Card.*};
+    my_cards_v = SELECT k FROM cards:k WHERE @@my_cards.contains(k.card_id);
+
+    devs = SELECT d
+        FROM my_cards_v:k -(MADE>:e7)- Transaction:t -(FROM_DEVICE>:e8)- DeviceProfile:d
+        ACCUM @@my_devices += d.profile_id;
+
+    ems = SELECT e
+        FROM my_cards_v:k -(MADE>:e9)- Transaction:t -((PURCHASER_EMAIL>|RECIPIENT_EMAIL>):e10)- EmailAddress:e
+        ACCUM @@my_emails += e.email;
+
+    // Cards of OTHER customers that touched any of my devices or emails
+    other_dev = SELECT k
+        FROM my_cards_v:mine_k -(MADE>:e11)- Transaction:t -(FROM_DEVICE>:e12)- DeviceProfile:d
+            -(FROM_DEVICE_REV>:e1)- Transaction:t2 -(MADE_REV>:e2)- Card:k
+        WHERE @@my_devices.contains(d.profile_id) AND NOT @@my_cards.contains(k.card_id)
+        ACCUM @@other_cards += k.card_id;
+
+    other_em = SELECT k
+        FROM my_cards_v:mine_k -(MADE>:e13)- Transaction:t
+            -(( PURCHASER_EMAIL>|RECIPIENT_EMAIL> ):e1)- EmailAddress:e
+            -(( PURCHASER_EMAIL_REV>|RECIPIENT_EMAIL_REV> ):e2)- Transaction:t2 -(MADE_REV>:e3)- Card:k
+        WHERE @@my_emails.contains(e.email) AND NOT @@my_cards.contains(k.card_id)
+        ACCUM @@other_cards += k.card_id;
+
+    // Resolve those cards to their customers
+    all_cards = {Card.*};
+    oc = SELECT k
+        FROM all_cards:k -(OWNS_REV>:e14)- Customer:c
+        WHERE @@other_cards.contains(k.card_id)
+        ACCUM @@other_customers += c.customer_id;
+
+    PRINT @@my_cards AS my_cards, @@my_devices AS my_devices,
+          @@my_emails AS my_emails, @@other_cards AS shared_with_cards,
+          @@other_customers AS shared_with_customers;
+}
+
+// ============================================================================
+//  v2 primitives (below) - the remaining spec S 5 queries.
+//  TYPEDEFs are file-scope; names are unique across gsql/ to avoid clashes.
+// ============================================================================
+
+
+// ----------------------------------------------------------------------------
+// q_mule_fanin_score(entity_id)
+// Identifier fan-in / fan-out mule topology (arena synthesis #7): ONE device
+// profile, email address, or identity cluster receiving activity from MANY
+// cards/customers, with high confirmed-fraud density. Replaces the v1
+// q_money_flow, which referenced Card->Card transfer edges this dataset
+// doesn't have (IEEE-CIS is card-not-present spend, not transfers).
+// Accepts: DeviceProfile ("DP:..."), EmailAddress ("p:..."/"r:..."),
+//          or IdentityCluster ("IC:...") primary id.
+// ----------------------------------------------------------------------------
+CREATE QUERY q_mule_fanin_score(STRING entity_id)
+FOR GRAPH SumoraFraudGraph {
+    SetAccum<STRING> @@cards;
+    SetAccum<STRING> @@customers;
+    SumAccum<INT> @@txns;
+    SumAccum<INT> @@fraud_txns;
+
+    seed_dev = {DeviceProfile.*};
+    seed_em  = {EmailAddress.*};
+    seed_cl  = {IdentityCluster.*};
+
+    hub_dev = SELECT d FROM seed_dev:d WHERE d.profile_id == entity_id;
+    hub_em  = SELECT e FROM seed_em:e  WHERE e.email == entity_id;
+    hub_cl  = SELECT c FROM seed_cl:c  WHERE c.cluster_id == entity_id;
+
+    // Device hub: every txn from this device -> its card
+    d_cards = SELECT k
+        FROM hub_dev:h -(FROM_DEVICE_REV>:e1)- Transaction:t -(MADE_REV>:e2)- Card:k
+        ACCUM
+            @@txns += 1,
+            @@fraud_txns += (CASE WHEN t.label_confirmed_fraud THEN 1 ELSE 0 END),
+            @@cards += k.card_id;
+
+    // Email hub: txns that used this email (purchaser or recipient side)
+    e_cards = SELECT k
+        FROM hub_em:h -(( PURCHASER_EMAIL_REV>|RECIPIENT_EMAIL_REV> ):e1)- Transaction:t -(MADE_REV>:e2)- Card:k
+        ACCUM
+            @@txns += 1,
+            @@fraud_txns += (CASE WHEN t.label_confirmed_fraud THEN 1 ELSE 0 END),
+            @@cards += k.card_id;
+
+    // Identity-cluster hub: every card in the cluster + their txns
+    c_cards = SELECT k
+        FROM hub_cl:h -(IN_CLUSTER_REV>:e1)- Card:k
+        ACCUM @@cards += k.card_id;
+
+    cl_txns = SELECT t
+        FROM hub_cl:h -(IN_CLUSTER_REV>:e1)- Card:k -(MADE>:e15)- Transaction:t
+        ACCUM
+            @@txns += 1,
+            @@fraud_txns += (CASE WHEN t.label_confirmed_fraud THEN 1 ELSE 0 END);
+
+    // Resolve cards to their customers
+    all_cards = {Card.*};
+    custs = SELECT c
+        FROM all_cards:k -(OWNS_REV>:e16)- Customer:c
+        WHERE @@cards.contains(k.card_id)
+        ACCUM @@customers += c.customer_id;
+
+    PRINT @@cards AS cards, @@customers AS customers,
+          @@txns AS txn_count, @@fraud_txns AS fraud_txn_count;
+}
+
+// ----------------------------------------------------------------------------
+// q_case_structural_similarity(case_id, top_k)
+// Weighted shared-entity overlap (arena synthesis #7): identity cluster 4,
+// device 3, email 2, card 2 - between the target FraudCase and (a) every other
+// FraudCase, (b) every ClosedCase (the bank's labeled memory). The community term
+// and the fusion with SIMILAR_TO Jaccard + vector cosine happen in the service
+// layer; this query owns the deterministic typed-overlap core.
+// HeapAccum keeps the best 50; the service applies top_k.
+// ----------------------------------------------------------------------------
+CREATE QUERY q_case_structural_similarity(STRING case_id, INT top_k = 5)
+FOR GRAPH SumoraFraudGraph {
+    OrAccum @target;
+    SumAccum<FLOAT> @overlap;
+    BagAccum<STRING> @@top_cases;
+    BagAccum<STRING> @@top_closed;
+
+    cases = {FraudCase.*};
+
+    // --- annotate the target case's subgraph ---
+    T0 = SELECT c FROM cases:c WHERE c.case_id == case_id;
+    Ttx = SELECT t FROM T0:c -(INVESTIGATES>:e17)- Transaction:t
+          ACCUM t.@target += true;
+    Tcard = SELECT k FROM Ttx:t -(MADE_REV>:e18)- Card:k
+          ACCUM k.@target += true;
+    Tdev = SELECT d FROM Ttx:t -(FROM_DEVICE>:e19)- DeviceProfile:d
+          ACCUM d.@target += true;
+    Tem  = SELECT e FROM Ttx:t -((PURCHASER_EMAIL>|RECIPIENT_EMAIL>):e20)- EmailAddress:e
+          ACCUM e.@target += true;
+    Tclus = SELECT i FROM Tcard:k -(IN_CLUSTER>:e21)- IdentityCluster:i
+          ACCUM i.@target += true;
+
+    // --- score candidate FraudCases (excluding the target) ---
+    C = SELECT c FROM cases:c WHERE c.case_id != case_id;
+
+    s_dev = SELECT c
+        FROM C:c -(INVESTIGATES>:e22)- Transaction:ct -(FROM_DEVICE>:e23)- DeviceProfile:d
+        WHERE d.@target == true
+        ACCUM c.@overlap += 3;
+    s_em = SELECT c
+        FROM C:c -(INVESTIGATES>:e24)- Transaction:ct -((PURCHASER_EMAIL>|RECIPIENT_EMAIL>):e25)- EmailAddress:e
+        WHERE e.@target == true
+        ACCUM c.@overlap += 2;
+    s_card = SELECT c
+        FROM C:c -(INVESTIGATES>:e26)- Transaction:ct -(MADE_REV>:e27)- Card:k
+        WHERE k.@target == true
+        ACCUM c.@overlap += 2;
+    s_clus = SELECT c
+        FROM C:c -(INVESTIGATES>:e28)- Transaction:ct -(MADE_REV>:e29)- Card:k -(IN_CLUSTER>:e30)- IdentityCluster:i
+        WHERE i.@target == true
+        ACCUM c.@overlap += 4;
+    collect_v = SELECT c
+        FROM C:c
+        POST-ACCUM IF c.@overlap > 0 THEN
+            @@top_cases += c.case_id + "|" + tostring(c.@overlap) + "|0"
+        END;
+
+    // --- score ClosedCases (the bank's memory) ---
+    ccs = {ClosedCase.*};
+    CC = SELECT cc FROM ccs:cc;
+
+    m_dev = SELECT cc
+        FROM CC:cc -(INVOLVES>:e31)- Transaction:ct -(FROM_DEVICE>:e32)- DeviceProfile:d
+        WHERE d.@target == true
+        ACCUM cc.@overlap += 3;
+    m_em = SELECT cc
+        FROM CC:cc -(INVOLVES>:e33)- Transaction:ct -((PURCHASER_EMAIL>|RECIPIENT_EMAIL>):e34)- EmailAddress:e
+        WHERE e.@target == true
+        ACCUM cc.@overlap += 2;
+    m_card = SELECT cc
+        FROM CC:cc -(INVOLVES>:e35)- Transaction:ct -(MADE_REV>:e36)- Card:k
+        WHERE k.@target == true
+        ACCUM cc.@overlap += 2;
+    m_clus = SELECT cc
+        FROM CC:cc -(INVOLVES>:e37)- Transaction:ct -(MADE_REV>:e38)- Card:k -(IN_CLUSTER>:e39)- IdentityCluster:i
+        WHERE i.@target == true
+        ACCUM cc.@overlap += 4;
+    collect2 = SELECT cc
+        FROM CC:cc
+        POST-ACCUM IF cc.@overlap > 0 THEN
+            @@top_closed += cc.case_id + "|" + tostring(cc.@overlap) + "|0"
+        END;
+
+    PRINT @@top_cases AS similar_cases, @@top_closed AS similar_closed_cases;
+}
+
+// ----------------------------------------------------------------------------
+// q_evidence_pack(case_id, max_vertices, max_edges)
+// Budgeted, ranked evidence retrieval for the LLM prompt (spec S 5, arena
+// synthesis #9 + context-window guardrail). Guarantees prompt size:
+// transactions are ranked by risk_score and capped at max_vertices; the edge
+// list is capped at max_edges. Truncation counts are returned so the caller
+// can state what was cut. NO raw CSV rows ever reach the LLM.
+// ----------------------------------------------------------------------------
+CREATE QUERY q_evidence_pack(STRING case_id, INT max_vertices = 50, INT max_edges = 100)
+FOR GRAPH SumoraFraudGraph {
+    // GSQL LIMIT takes literals only, so ranking/capping uses HeapAccums:
+    //   @@txns  : top-256 txns by risk_score (HeapAccum cap)
+    //   @@edges : top-1024 edge records (insertion order)
+    // and the SERVICE layer applies max_vertices / max_edges on the returned
+    // ranked lists (documented contract; the heaps guarantee bounded output).
+    BagAccum<STRING> @@txns;
+    BagAccum<STRING> @@edges;
+    SetAccum<STRING> @@card_ids, @@device_ids, @@email_ids, @@cluster_ids, @@region_ids;
+    SumAccum<INT> @@n_txn_total, @@n_edge_total;
+
+    cases = {FraudCase.*};
+    F = SELECT c FROM cases:c WHERE c.case_id == case_id;
+
+    // Anchor: the flagged transaction(s) of the case
+    anchor = SELECT t FROM F:c -(INVESTIGATES>:e40)- Transaction:t
+             ACCUM @@n_txn_total += 1;
+
+    // Neighborhood: other txns on the same card / device, ranked by risk
+    nb_card = SELECT t
+        FROM anchor:a -(MADE_REV>:e41)- Card:k -(MADE>:e42)- Transaction:t
+        WHERE t != a
+        ACCUM @@n_txn_total += 1;
+    nb_dev = SELECT t
+        FROM anchor:a -(FROM_DEVICE>:e43)- DeviceProfile:d -(FROM_DEVICE_REV>:e1)- Transaction:t
+        WHERE t != a
+        ACCUM @@n_txn_total += 1;
+
+    pack = anchor UNION nb_card UNION nb_dev;
+
+    // Ranked transaction records for the prompt (HeapAccum = ranked cap)
+    tx = SELECT t
+        FROM pack:t
+        ACCUM @@txns += t.txn_id + "|" + tostring(t.amt) + "|" + tostring(t.risk_score) + "|"
+                              + tostring(t.label_confirmed_fraud) + "|" + t.channel + "|" + tostring(t.ts);
+
+    // Entity ids + edge list (capped by the heaps; service applies max_edges)
+    ed_card = SELECT k
+        FROM pack:t -(MADE_REV>:e44)- Card:k
+        ACCUM
+            @@card_ids += k.card_id,
+            @@edges += t.txn_id + "|MADE|" + k.card_id,
+            @@n_edge_total += 1;
+    ed_dev = SELECT d
+        FROM pack:t -(FROM_DEVICE>:e45)- DeviceProfile:d
+        ACCUM
+            @@device_ids += d.profile_id,
+            @@edges += t.txn_id + "|FROM_DEVICE|" + d.profile_id,
+            @@n_edge_total += 1;
+    ed_em = SELECT e
+        FROM pack:t -((PURCHASER_EMAIL>|RECIPIENT_EMAIL>):e46)- EmailAddress:e
+        ACCUM
+            @@email_ids += e.email,
+            @@edges += t.txn_id + "|EMAIL|" + e.email,
+            @@n_edge_total += 1;
+    ed_reg = SELECT r
+        FROM pack:t -(BILLED_IN>:e47)- BillingRegion:r
+        ACCUM
+            @@region_ids += r.region_id,
+            @@edges += t.txn_id + "|BILLED_IN|" + r.region_id,
+            @@n_edge_total += 1;
+    ed_clus = SELECT i
+        FROM pack:t -(MADE_REV>:e48)- Card:k -(IN_CLUSTER>:e49)- IdentityCluster:i
+        ACCUM
+            @@cluster_ids += i.cluster_id,
+            @@edges += k.card_id + "|IN_CLUSTER|" + i.cluster_id,
+            @@n_edge_total += 1;
+
+    PRINT @@txns AS transactions, @@edges AS edges,
+          @@card_ids AS card_ids, @@device_ids AS device_ids,
+          @@email_ids AS email_ids, @@cluster_ids AS cluster_ids,
+          @@region_ids AS region_ids,
+          @@n_txn_total AS txn_candidates, @@n_edge_total AS edge_candidates;
+}
+
+// ----------------------------------------------------------------------------
+// q_recurring_entities(min_cases)
+// Entities appearing across >= min_cases among FraudCase (agent-resolved) and
+// ClosedCase (bank history) - the mandated "find recurring patterns across
+// cases" capability as one deterministic query.
+// Membership detail (entity -> set of case ids) is returned alongside counts.
+// ----------------------------------------------------------------------------
+CREATE QUERY q_recurring_entities(INT min_cases = 2)
+FOR GRAPH SumoraFraudGraph {
+    SetAccum<STRING> @cases;
+    BagAccum<STRING> @@devices, @@emails, @@clusters, @@regions;
+    MapAccum<STRING, SetAccum<STRING>> @@device_cases, @@email_cases,
+                                        @@cluster_cases, @@region_cases;
+
+    cs  = {FraudCase.*};
+    ccs = {ClosedCase.*};
+
+    // Devices
+    d1 = SELECT dev FROM cs:c -(INVESTIGATES>:e50)- Transaction:t -(FROM_DEVICE>:e51)- DeviceProfile:dev
+         ACCUM dev.@cases += c.case_id,
+               @@device_cases += (dev.profile_id -> c.case_id);
+    d2 = SELECT dev FROM ccs:cc -(INVOLVES>:e52)- Transaction:t -(FROM_DEVICE>:e53)- DeviceProfile:dev
+         ACCUM dev.@cases += cc.case_id,
+               @@device_cases += (dev.profile_id -> cc.case_id);
+    devs_all = {DeviceProfile.*};
+    d3 = SELECT dev FROM devs_all:dev
+         WHERE dev.@cases.size() >= min_cases
+         POST-ACCUM @@devices += dev.profile_id + "|" + tostring(dev.@cases.size());
+
+    // Emails
+    e1 = SELECT em FROM cs:c -(INVESTIGATES>:e54)- Transaction:t -((PURCHASER_EMAIL>|RECIPIENT_EMAIL>):e55)- EmailAddress:em
+         ACCUM em.@cases += c.case_id,
+               @@email_cases += (em.email -> c.case_id);
+    e2 = SELECT em FROM ccs:cc -(INVOLVES>:e56)- Transaction:t -((PURCHASER_EMAIL>|RECIPIENT_EMAIL>):e57)- EmailAddress:em
+         ACCUM em.@cases += cc.case_id,
+               @@email_cases += (em.email -> cc.case_id);
+    emails_all = {EmailAddress.*};
+    e3 = SELECT em FROM emails_all:em
+         WHERE em.@cases.size() >= min_cases
+         POST-ACCUM @@emails += em.email + "|" + tostring(em.@cases.size());
+
+    // Identity clusters (via the case's cards)
+    c1 = SELECT ic FROM cs:c -(INVESTIGATES>:e58)- Transaction:t -(MADE_REV>:e59)- Card:k -(IN_CLUSTER>:e60)- IdentityCluster:ic
+         ACCUM ic.@cases += c.case_id,
+               @@cluster_cases += (ic.cluster_id -> c.case_id);
+    c2 = SELECT ic FROM ccs:cc -(INVOLVES>:e61)- Transaction:t -(MADE_REV>:e62)- Card:k -(IN_CLUSTER>:e63)- IdentityCluster:ic
+         ACCUM ic.@cases += cc.case_id,
+               @@cluster_cases += (ic.cluster_id -> cc.case_id);
+    clus_all = {IdentityCluster.*};
+    c3 = SELECT ic FROM clus_all:ic
+         WHERE ic.@cases.size() >= min_cases
+         POST-ACCUM @@clusters += ic.cluster_id + "|" + tostring(ic.@cases.size());
+
+    // Billing regions
+    r1 = SELECT rg FROM cs:c -(INVESTIGATES>:e64)- Transaction:t -(BILLED_IN>:e65)- BillingRegion:rg
+         ACCUM rg.@cases += c.case_id,
+               @@region_cases += (rg.region_id -> c.case_id);
+    r2 = SELECT rg FROM ccs:cc -(INVOLVES>:e66)- Transaction:t -(BILLED_IN>:e67)- BillingRegion:rg
+         ACCUM rg.@cases += cc.case_id,
+               @@region_cases += (rg.region_id -> cc.case_id);
+    reg_all = {BillingRegion.*};
+    r3 = SELECT rg FROM reg_all:rg
+         WHERE rg.@cases.size() >= min_cases
+         POST-ACCUM @@regions += rg.region_id + "|" + tostring(rg.@cases.size());
+
+    PRINT @@devices AS recurring_devices, @@emails AS recurring_emails,
+          @@clusters AS recurring_clusters, @@regions AS recurring_regions,
+          @@device_cases AS device_case_members,
+          @@email_cases AS email_case_members,
+          @@cluster_cases AS cluster_case_members,
+          @@region_cases AS region_case_members;
+}
+
+// ----------------------------------------------------------------------------
+// q_hypothesis_balance(case_id)
+// SUPPORTS vs CONTRADICTS per hypothesis for a case (Hypothesis vertices are
+// written by q_pattern_score / the pattern scorers). Balance uses a Laplace
+// smoothing so a case with no hypotheses is neutral 0.0, not 1.0.
+// ----------------------------------------------------------------------------
+CREATE QUERY q_hypothesis_balance(STRING case_id)
+FOR GRAPH SumoraFraudGraph {
+    BagAccum<STRING> @@hyps;
+    SumAccum<INT> @@support, @@contradict;
+    SumAccum<DOUBLE> @@balance;
+
+    cs = {FraudCase.*};
+    H = SELECT h
+        FROM cs:c -(HAS_HYPOTHESIS>:e68)- Hypothesis:h
+        WHERE c.case_id == case_id
+        ACCUM
+            @@hyps += h.hypothesis_id + "|" + h.pattern_id + "|" + tostring(h.score)
+                    + "|" + tostring(h.support_count) + "|" + tostring(h.contradict_count),
+            @@support += h.support_count,
+            @@contradict += h.contradict_count;
+
+    @@balance = 1.0 * (@@support - @@contradict) / (@@support + @@contradict + 1);
+
+    PRINT @@hyps AS hypotheses, @@support AS support_total,
+          @@contradict AS contradict_total, @@balance AS balance;
+}
+
+// ----------------------------------------------------------------------------
+// q_case_feature_vector(case_id)
+// The deterministic feature vector for the isotonic calibrator (spec S 6):
+//   [ 0..4]  pattern_scores x5, FIXED order:
+//            card_testing, card_not_present_fraud, card_not_present_new_device,
+//            out_of_region_use, account_takeover
+//   [    5]  mem_fraud      (# CITED ClosedCases with outcome=confirmed_fraud)
+//   [    6]  mem_cleared    (# CITED ClosedCases with outcome=cleared)
+//   [    7]  hypothesis_balance (Laplace-smoothed support-contradict)
+//   [    8]  risk_score of the flagged transaction (input, not an answer)
+//   [    9]  community_density (fraud density of the flagged txn's Louvain
+//            community; 0 if community not computed)
+//   [   10]  device_fraud_count (confirmed-fraud txns on the flagged device)
+//   [   11]  cluster_fraud_count (confirmed-fraud txns in the flagged cluster)
+// The calibrator consumes EXACTLY this order - do not reorder.
+// Assumes one flagged anchor transaction per case (case_pack v1 invariant).
+// ----------------------------------------------------------------------------
+CREATE QUERY q_case_feature_vector(STRING case_id)
+FOR GRAPH SumoraFraudGraph {
+    SumAccum<DOUBLE> @@s_ct, @@s_cnp, @@s_cnpnd, @@s_oor, @@s_ato;
+    SumAccum<INT> @@mem_f, @@mem_cl, @@sup, @@con;
+    SumAccum<INT> @@flagged_community, @@n_comm_txns, @@n_comm_fraud;
+    SumAccum<INT> @@dev_fraud, @@clus_fraud;
+    SumAccum<DOUBLE> @@risk, @@comm_density, @@balance;
+    ListAccum<DOUBLE> @@feature_vector;
+
+    cs = {FraudCase.*};
+
+    // Pattern scores from Hypothesis vertices (written by q_pattern_score)
+    HP = SELECT h
+        FROM cs:c -(HAS_HYPOTHESIS>:e69)- Hypothesis:h
+        WHERE c.case_id == case_id
+        ACCUM
+            @@s_ct    += (CASE WHEN h.pattern_id == "card_testing"                THEN h.score ELSE 0.0 END),
+            @@s_cnp   += (CASE WHEN h.pattern_id == "card_not_present_fraud"      THEN h.score ELSE 0.0 END),
+            @@s_cnpnd += (CASE WHEN h.pattern_id == "card_not_present_new_device" THEN h.score ELSE 0.0 END),
+            @@s_oor   += (CASE WHEN h.pattern_id == "out_of_region_use"           THEN h.score ELSE 0.0 END),
+            @@s_ato   += (CASE WHEN h.pattern_id == "account_takeover"            THEN h.score ELSE 0.0 END),
+            @@sup += h.support_count,
+            @@con += h.contradict_count;
+
+    // Memory: cited ClosedCases by outcome (admission-controlled: only
+    // bank-confirmed history is citable - agent cases are not ClosedCase)
+    M = SELECT cc
+        FROM cs:c -(CITES>:e70)- ClosedCase:cc
+        WHERE c.case_id == case_id
+        ACCUM
+            @@mem_f += (CASE WHEN cc.outcome == "confirmed_fraud" THEN 1 ELSE 0 END),
+            @@mem_cl += (CASE WHEN cc.outcome == "cleared" THEN 1 ELSE 0 END);
+
+    // Flagged anchor transaction
+    T = SELECT t
+        FROM cs:c -(INVESTIGATES>:e71)- Transaction:t
+        WHERE c.case_id == case_id
+        ACCUM @@risk += t.risk_score
+        POST-ACCUM @@flagged_community += t.louvain_community;
+
+    // Community fraud density (exact, bounded by one community)
+    all_t = {Transaction.*};
+    CT = SELECT t2
+        FROM all_t:t2
+        WHERE t2.louvain_community == @@flagged_community AND @@flagged_community > 0
+        ACCUM
+            @@n_comm_txns += 1,
+            @@n_comm_fraud += (CASE WHEN t2.label_confirmed_fraud THEN 1 ELSE 0 END);
+    @@comm_density = (CASE WHEN @@n_comm_txns > 0
+                          THEN 1.0 * @@n_comm_fraud / @@n_comm_txns ELSE 0.0 END);
+
+    // Device + cluster fraud counts
+    D = SELECT d
+        FROM T:t -(FROM_DEVICE>:e72)- DeviceProfile:d
+        ACCUM @@dev_fraud += d.fraud_txn_count;
+    CL = SELECT i
+        FROM T:t -(MADE_REV>:e73)- Card:k -(IN_CLUSTER>:e74)- IdentityCluster:i
+        ACCUM @@clus_fraud += i.confirmed_fraud_txn_count;
+
+    // Hypothesis balance
+    @@balance = 1.0 * (@@sup - @@con) / (@@sup + @@con + 1);
+
+    // FIXED-order emission (calibrator contract - see header)
+    @@feature_vector += @@s_ct;
+    @@feature_vector += @@s_cnp;
+    @@feature_vector += @@s_cnpnd;
+    @@feature_vector += @@s_oor;
+    @@feature_vector += @@s_ato;
+    @@feature_vector += @@mem_f;
+    @@feature_vector += @@mem_cl;
+    @@feature_vector += @@balance;
+    @@feature_vector += @@risk;
+    @@feature_vector += @@comm_density;
+    @@feature_vector += @@dev_fraud;
+    @@feature_vector += @@clus_fraud;
+
+    PRINT @@feature_vector AS feature_vector,
+          @@flagged_community AS flagged_community;
+}
+
+// ============================================================================
+// Write-back (mandated capability: the case returns to the graph, S6)
+// q_record_case: upsert the agent's FraudCase with the S6a decision fields,
+//   link affected transactions (INVESTIGATES), the matched pattern (MATCHES),
+//   and cited prior cases (CITES). PK = the existing case-pack FraudCase.
+// q_add_evidence / q_add_decision / q_add_step: per-item audit persistence
+//   (Evidence / Decision / AgentStep + their edges).
+// All are idempotent: re-running overwrites the same primary IDs.
+// ============================================================================
+
+CREATE QUERY q_record_case(STRING case_id, STRING status, STRING verdict,
+    DOUBLE p_val, STRING pattern, STRING pattern_desc, DOUBLE exposure_usd,
+    STRING summary, STRING stop_reason, DATETIME closed_ts,
+    SET<STRING> affected_txn_ids, SET<STRING> similar_case_ids) SYNTAX v2 {
+  // one-row anchor: PKs have primary_id_as_attribute, so PK filter works
+  fcs = {FraudCase.*};
+  fc = SELECT s FROM fcs:s WHERE s.case_id == case_id
+       POST-ACCUM s.status = status,
+                  s.verdict = verdict,
+                  s.fraud_probability = p_val,
+                  s.pattern = pattern,
+                  s.pattern_description = pattern_desc,
+                  s.exposure_usd = exposure_usd,
+                  s.summary = summary,
+                  s.stop_reason = stop_reason,
+                  s.closed_ts = closed_ts;
+  txns = {Transaction.*};
+  ie = SELECT t FROM txns:t WHERE t.txn_id IN affected_txn_ids
+       ACCUM INSERT INTO INVESTIGATES VALUES (case_id, t.txn_id);
+  pats = {FraudPattern.*};
+  me = SELECT f FROM pats:f WHERE f.pattern_id == pattern
+       ACCUM INSERT INTO MATCHES VALUES (case_id, pattern);
+  ccs = {ClosedCase.*};
+  ce = SELECT c FROM ccs:c WHERE c.case_id IN similar_case_ids
+       ACCUM INSERT INTO CITES VALUES (case_id, c.case_id);
+}
+
+CREATE QUERY q_add_evidence(STRING case_id, STRING evidence_id, STRING claim,
+    STRING source, STRING ref, STRING entity_ids_json) SYNTAX v2 {
+  anchor = {FraudCase.*};
+  e1 = SELECT s FROM anchor:s WHERE s.case_id == case_id
+       ACCUM INSERT INTO Evidence VALUES (evidence_id, claim, source, ref,
+                                          entity_ids_json);
+  e2 = SELECT s FROM anchor:s WHERE s.case_id == case_id
+       ACCUM INSERT INTO HAS_EVIDENCE VALUES (case_id, evidence_id);
+}
+
+CREATE QUERY q_add_decision(STRING case_id, STRING decision_id, STRING phase,
+    STRING actions_json, STRING what_changed, DATETIME ts) SYNTAX v2 {
+  anchor = {FraudCase.*};
+  d1 = SELECT s FROM anchor:s WHERE s.case_id == case_id
+       ACCUM INSERT INTO Decision VALUES (decision_id, phase, actions_json,
+                                          what_changed, ts);
+  d2 = SELECT s FROM anchor:s WHERE s.case_id == case_id
+       ACCUM INSERT INTO HAS_DECISION VALUES (case_id, decision_id);
+}
+
+CREATE QUERY q_add_step(STRING case_id, STRING step_id, INT step_index,
+    STRING node, STRING tool_call_json, STRING result_ref, STRING reasoning,
+    STRING rules_json, DATETIME ts) SYNTAX v2 {
+  // Attribute order matches schema.gsql AgentStep:
+  //   step_id, case_id, step_index, node, tool_call, result_ref,
+  //   reasoning, policy_rules_fired, ts
+  anchor = {FraudCase.*};
+  s1 = SELECT f FROM anchor:f WHERE f.case_id == case_id
+       ACCUM INSERT INTO AgentStep VALUES (step_id, case_id, step_index, node,
+                                           tool_call_json, result_ref,
+                                           reasoning, rules_json, ts);
+  s2 = SELECT f FROM anchor:f WHERE f.case_id == case_id
+       ACCUM INSERT INTO CASE_HAS_STEP VALUES (case_id, step_id);
+}

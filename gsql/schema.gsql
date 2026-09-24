@@ -1,0 +1,252 @@
+// ============================================================================
+// Sumora - HHGOA_IEEE fraud graph schema (TigerGraph 4.x)
+// Spec: docs/superpowers/specs/2026-09-19-agentic-fraud-investigation-design.md S 4
+// One graph, two layers:
+//   A. Fraud-topology layer  (IEEE-CIS data + derived structure)
+//   B. FraudCase/memory layer     (written by the agent; mirrors the answer file)
+//
+// REBUILD:    bash connect_and_verify.sh --drop-all ...
+// ADD LATER:  run this file again WITHOUT the DROP (CREATE ... is additive)
+// ============================================================================
+
+// Uncomment for a clean rebuild (destroys all data in the graph):
+// DROP GRAPH SumoraFraudGraph
+// DROP ALL
+
+USE GLOBAL
+
+// ----------------------------------------------------------------------------
+// V-feature selection (spec S 4 "selected V features", arena synthesis #6):
+// V1..V339 is too wide to store as 339 typed columns. We keep the ~30 V
+// features that dominate published IEEE-CIS fraud-detection importance tables
+// (Vesta/C-features engineered, Vena "match" features, count/velocity vs.
+// email-domain features). All stored as FLOAT; empty CSV cells -> 0.0.
+// Chosen: V12 V29 V45 V53 V57 V62 V65 V70 V75 V94 V95 V96 V97 V101 V102 V107
+//         V127 V128 V130 V131 V137 V187 V200 V201 V258 V279 V294 V307 V308 V310
+// ----------------------------------------------------------------------------
+
+CREATE VERTEX Customer (
+    PRIMARY_ID customer_id STRING,
+    degree_norm        DOUBLE DEFAULT 0,
+    pagerank           DOUBLE DEFAULT 0,
+    wcc_id             INT DEFAULT 0,
+    louvain_community  INT DEFAULT 0,
+    fraud_density_score DOUBLE DEFAULT 0
+) WITH primary_id_as_attribute="true", stats="outdegree_by_edgetype"
+
+CREATE VERTEX Card (
+    PRIMARY_ID card_id STRING,          // e.g. "C12382-K1"; composite key string
+    card2 FLOAT, card3 FLOAT, card4 STRING, card5 FLOAT, card6 STRING,
+    // IEEE-CIS card columns are floats in the CSV ("242.0"); FLOAT avoids
+    // float_parse errors. card4/card6 are strings (amex/visa, credit/debit).
+    confirmed_fraud_txn_count INT DEFAULT 0,
+    total_txn_count           INT DEFAULT 0,
+    degree_norm        DOUBLE DEFAULT 0,
+    pagerank           DOUBLE DEFAULT 0,
+    wcc_id             INT DEFAULT 0,
+    louvain_community  INT DEFAULT 0,
+    triangle_count     INT DEFAULT 0,
+    local_clus_coef    DOUBLE DEFAULT 0,
+    fraud_density_score DOUBLE DEFAULT 0
+) WITH primary_id_as_attribute="true", stats="outdegree_by_edgetype"
+
+CREATE VERTEX Transaction (
+    PRIMARY_ID txn_id STRING,
+    ts DATETIME,                       // real calendar timestamp (added col)
+    txn_dt DOUBLE,                     // raw TransactionDT (IEEE-CIS offset)
+    card1 INT,                         // kept in-graph: needed to rebuild the
+                                       // IdentityCluster key card1|addr1|domain
+    amt FLOAT,
+    risk_score FLOAT,                  // bank model score 0..1 (added col)
+    channel STRING,                    // online | in_person (added col)
+    product_cd STRING,
+    dist1 FLOAT, dist2 FLOAT,
+    C1 FLOAT, C2 FLOAT, C3 FLOAT, C4 FLOAT, C5 FLOAT, C6 FLOAT, C7 FLOAT,
+    C8 FLOAT, C9 FLOAT, C10 FLOAT, C11 FLOAT, C12 FLOAT, C13 FLOAT, C14 FLOAT,
+    D1 FLOAT, D2 FLOAT, D3 FLOAT, D4 FLOAT, D5 FLOAT, D6 FLOAT, D7 FLOAT,
+    D8 FLOAT, D9 FLOAT, D10 FLOAT, D11 FLOAT, D12 FLOAT, D13 FLOAT, D14 FLOAT,
+    D15 FLOAT,
+    M1 STRING, M2 STRING, M3 STRING, M4 STRING, M5 STRING, M6 STRING,
+    M7 STRING, M8 STRING, M9 STRING,
+    V12 FLOAT, V29 FLOAT, V45 FLOAT, V53 FLOAT, V57 FLOAT, V62 FLOAT,
+    V65 FLOAT, V70 FLOAT, V75 FLOAT, V94 FLOAT, V95 FLOAT, V96 FLOAT,
+    V97 FLOAT, V101 FLOAT, V102 FLOAT, V107 FLOAT, V127 FLOAT, V128 FLOAT,
+    V130 FLOAT, V131 FLOAT, V137 FLOAT, V187 FLOAT, V200 FLOAT, V201 FLOAT,
+    V258 FLOAT, V279 FLOAT, V294 FLOAT, V307 FLOAT, V308 FLOAT, V310 FLOAT,
+    label_confirmed_fraud BOOL,   // written by job_propagate_case_labels
+    // pre-computed algorithm attributes (spec S 4)
+    wcc_id             INT DEFAULT 0,
+    louvain_community  INT DEFAULT 0,
+    pagerank           DOUBLE DEFAULT 0,
+    triangle_count     INT DEFAULT 0,
+    local_clus_coef    DOUBLE DEFAULT 0,
+    degree_norm        DOUBLE DEFAULT 0,
+    fraud_density_score DOUBLE DEFAULT 0
+) WITH primary_id_as_attribute="true", stats="outdegree_by_edgetype"
+
+
+CREATE VERTEX DeviceProfile (
+    PRIMARY_ID profile_id STRING,      // hash(DeviceInfo|id_31|id_33|id_35)
+    device_info STRING,
+    os STRING,                         // id_30
+    browser STRING,                    // id_31
+    screen STRING,                     // id_33 (e.g. "2220x1080")
+    distinct_card_count INT DEFAULT 0, // filled by job_compute_pattern_priors
+    fraud_txn_count     INT DEFAULT 0,
+    degree_norm        DOUBLE DEFAULT 0,
+    pagerank           DOUBLE DEFAULT 0,
+    louvain_community  INT DEFAULT 0,
+    fraud_density_score DOUBLE DEFAULT 0
+) WITH primary_id_as_attribute="true", stats="outdegree_by_edgetype"
+
+CREATE VERTEX EmailAddress (
+    PRIMARY_ID email STRING,          // "p:<domain>" / "r:<domain>" - IEEE-CIS
+    degree_norm        DOUBLE DEFAULT 0,
+    pagerank           DOUBLE DEFAULT 0,
+    louvain_community  INT DEFAULT 0,
+    fraud_density_score DOUBLE DEFAULT 0
+) WITH primary_id_as_attribute="true"  // gives only the domain; kept as a full
+                                       // address vertex so a per-customer prefix
+                                       // can be added later without migration.
+
+CREATE VERTEX EmailDomain (
+    PRIMARY_ID domain STRING,
+    degree_norm        DOUBLE DEFAULT 0,
+    pagerank           DOUBLE DEFAULT 0,
+    louvain_community  INT DEFAULT 0,
+    fraud_density_score DOUBLE DEFAULT 0
+) WITH primary_id_as_attribute="true", stats="outdegree_by_edgetype"
+
+CREATE VERTEX BillingRegion (
+    PRIMARY_ID region_id STRING,       // addr1 as string, e.g. "444.0"
+    degree_norm        DOUBLE DEFAULT 0,
+    pagerank           DOUBLE DEFAULT 0,
+    louvain_community  INT DEFAULT 0,
+    fraud_density_score DOUBLE DEFAULT 0
+) WITH primary_id_as_attribute="true", stats="outdegree_by_edgetype"
+
+CREATE VERTEX IdentityCluster (
+    PRIMARY_ID cluster_id STRING,      // "IC:<card1>|<addr1>|<P_emaildomain>"
+    card1 INT, addr1 FLOAT, p_domain STRING,
+    confirmed_fraud_txn_count INT DEFAULT 0,
+    card_count                INT DEFAULT 0,
+    louvain_community  INT DEFAULT 0,
+    fraud_density_score DOUBLE DEFAULT 0
+) WITH primary_id_as_attribute="true"
+
+// ClosedCase = the bank's labeled history = the agent's starting memory.
+CREATE VERTEX ClosedCase (
+    PRIMARY_ID case_id STRING,
+    customer_id STRING, card_id STRING,
+    opened_at DATETIME, closed_at DATETIME,
+    outcome STRING,                    // confirmed_fraud | cleared
+    pattern STRING,                    // 5 documented | undocumented | none
+    first_fraud_txn_id STRING,
+    n_txns INT, exposure_usd FLOAT,
+    actions_taken STRING, report_filed STRING,
+    analyst_notes STRING               // embedded by the service layer for retrieval
+) WITH primary_id_as_attribute="true", stats="outdegree_by_edgetype"
+
+// Format) so export is a serialization, not a translation.
+// Field names mirror the answer-file contract exactly (spec S 4, README S Answer
+// Format) so export is a serialization, not a translation.
+CREATE VERTEX FraudCase (
+    PRIMARY_ID case_id STRING,
+    status STRING,                     // open|closed_fraud|closed_legitimate|escalated
+    verdict STRING,                    // fraud|legitimate|uncertain
+    fraud_probability DOUBLE,          // from the isotonic calibrator, never the LLM
+    pattern STRING,
+    pattern_description STRING,
+    exposure_usd DOUBLE,
+    summary STRING,
+    opened_ts DATETIME, closed_ts DATETIME,
+    stop_reason STRING
+    // summary_embedding: vector attribute added post-v1 via ALTER VERTEX once
+    // the embedding service dimension is fixed (avoids a v1 schema lock-in).
+) WITH primary_id_as_attribute="true", stats="outdegree_by_edgetype"
+
+CREATE VERTEX Evidence (
+    PRIMARY_ID evidence_id STRING,     // e.g. "EV-HHG-001-03"
+    claim STRING,
+    source STRING,                     // graph | document | customer | external
+    ref STRING,                        // query name / doc section / request id
+    entity_ids STRING                  // JSON array of IDs the claim rests on
+) WITH primary_id_as_attribute="true"
+
+CREATE VERTEX Decision (
+    PRIMARY_ID decision_id STRING,     // e.g. "DEC-HHG-001-initial"
+    phase STRING,                      // initial | final
+    actions STRING,                    // JSON [{action, route, reason}]
+    what_changed STRING,               // structured JSON when available
+    ts DATETIME
+) WITH primary_id_as_attribute="true"
+
+CREATE VERTEX FraudPattern (
+    PRIMARY_ID pattern_id STRING,
+    name STRING,
+    documented BOOL,
+    prior_fraud_rate DOUBLE DEFAULT 0, // P(confirmed_fraud|pattern) in history
+    case_count INT DEFAULT 0           // written by job_compute_pattern_priors
+) WITH primary_id_as_attribute="true"
+
+// Persisted agent step - "show me why it did that on case 14" is a graph query.
+CREATE VERTEX AgentStep (
+    PRIMARY_ID step_id STRING,         // e.g. "HHG-001:0004"
+    case_id STRING,
+    step_index INT,
+    node STRING,                       // LangGraph node name
+    tool_call STRING,                  // MCP tool + args (JSON)
+    result_ref STRING,                 // pointer / truncated result summary
+    reasoning STRING,
+    policy_rules_fired STRING,         // JSON list of rule_ids
+    ts DATETIME
+) WITH primary_id_as_attribute="true"
+
+// Written by q_pattern_score (spec S 5); balances support vs contradiction.
+CREATE VERTEX Hypothesis (
+    PRIMARY_ID hypothesis_id STRING,   // e.g. "HYP-HHG-001-card_testing"
+    pattern_id STRING,
+    score DOUBLE,                      // 0..1 deterministic pattern score
+    support_count INT DEFAULT 0,
+    contradict_count INT DEFAULT 0
+) WITH primary_id_as_attribute="true"
+
+// ============================ EDGES ==========================================
+
+CREATE DIRECTED EDGE OWNS            (FROM Customer, TO Card)
+    WITH REVERSE_EDGE="OWNS_REV"
+CREATE DIRECTED EDGE MADE            (FROM Card, TO Transaction, weight DOUBLE DEFAULT 1)
+    WITH REVERSE_EDGE="MADE_REV"
+CREATE DIRECTED EDGE FROM_DEVICE     (FROM Transaction, TO DeviceProfile, weight DOUBLE DEFAULT 1)
+    WITH REVERSE_EDGE="FROM_DEVICE_REV"
+CREATE DIRECTED EDGE PURCHASER_EMAIL (FROM Transaction, TO EmailAddress)
+    WITH REVERSE_EDGE="PURCHASER_EMAIL_REV"
+CREATE DIRECTED EDGE RECIPIENT_EMAIL (FROM Transaction, TO EmailAddress)
+    WITH REVERSE_EDGE="RECIPIENT_EMAIL_REV"
+CREATE DIRECTED EDGE ON_DOMAIN       (FROM EmailAddress, TO EmailDomain)
+CREATE DIRECTED EDGE BILLED_IN       (FROM Transaction, TO BillingRegion)
+    WITH REVERSE_EDGE="BILLED_IN_REV"
+CREATE DIRECTED EDGE IN_CLUSTER      (FROM Card, TO IdentityCluster)
+    WITH REVERSE_EDGE="IN_CLUSTER_REV"
+// Per-card time order - powers card-testing sequences, bursts, ATO gaps.
+// weight: Louvain/GDS templates read e.getAttr(weight_attribute) unconditionally,
+// so traversed edges carry a real DOUBLE weight (default 1 = unweighted).
+CREATE DIRECTED EDGE NEXT            (FROM Transaction, TO Transaction, weight DOUBLE DEFAULT 1)
+CREATE DIRECTED EDGE INVOLVES        (FROM ClosedCase, TO Transaction)
+    WITH REVERSE_EDGE="INVOLVES_REV"
+CREATE DIRECTED EDGE ON_CARD         (FROM ClosedCase, TO Card)
+CREATE DIRECTED EDGE CONNECTED_TO    (FROM ClosedCase, TO Card)
+
+CREATE DIRECTED EDGE INVESTIGATES    (FROM FraudCase, TO Transaction)
+    WITH REVERSE_EDGE="INVESTIGATES_REV"
+CREATE DIRECTED EDGE HAS_EVIDENCE    (FROM FraudCase, TO Evidence)
+CREATE DIRECTED EDGE HAS_DECISION    (FROM FraudCase, TO Decision)
+CREATE DIRECTED EDGE MATCHES         (FROM FraudCase, TO FraudPattern)
+CREATE DIRECTED EDGE CITES           (FROM FraudCase, TO ClosedCase)
+CREATE DIRECTED EDGE SIMILAR_TO      (FROM FraudCase, TO FraudCase, score DOUBLE)
+CREATE DIRECTED EDGE CASE_HAS_STEP   (FROM FraudCase, TO AgentStep)
+CREATE DIRECTED EDGE HAS_HYPOTHESIS  (FROM FraudCase, TO Hypothesis)
+
+// (*) = include every global type declared above (4.x syntax; an explicit
+// type list requires vertex:edge pair syntax and fails to parse on 4.2).
+CREATE GRAPH SumoraFraudGraph (*)

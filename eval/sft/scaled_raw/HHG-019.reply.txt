@@ -1,0 +1,88 @@
+{
+  "case_id": "HHG-019",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3503878"
+    ],
+    "first_suspicious_txn_id": "3503878",
+    "connected_card_ids": [
+      "C07987-K1"
+    ],
+    "connected_device_profiles": [
+      "DP:Windows|firefox 57.0|1680x1050"
+    ],
+    "connected_device_profiles": [],
+    "exposure_usd": 99.92,
+    "evidence": [
+      {
+        "claim": "A single transaction was flagged by a risk model with a high score of 0.90.",
+        "source": "document",
+        "ref": "case_id: HHG-019",
+        "entity_ids": [
+          "3503878"
+        ]
+      },
+      {
+        "claim": "The flagged transaction is a high-value online purchase ($99.92).",
+        "source": "graph",
+        "ref": "transaction: 3503878",
+        "entity_ids": [
+          "3503878"
+        ]
+      },
+      {
+        "claim": "The transaction originated from a device profile that is linked to a cluster of other cards with a history of fraud.",
+        "source": "graph",
+        "ref": "edges",
+        "entity_ids": [
+          "C07987-K1",
+          "IC:11539"
+        ]
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "A single high-risk online transaction was flagged by the system. Investigation revealed that the device used for the transaction is part of a cluster linked to multiple other cards with a history of fraudulent activity. This strongly indicates the card details were compromised and used for card-not-present fraud.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "what_changed": "none: decision unchanged after evidence review"
+  },
+  "sar": {
+    "file": true,
+    "reason": "SAR is required as fraud is confirmed and the activity connects to a shared device profile linked to other known fraud cases (R6).",
+    "narrative": "On 2016-12-01, a single fraudulent online transaction for $99.92 was made using card C07987-K2. The transaction was flagged by a risk model. Investigation revealed the transaction originated from a device profile that is part of a larger cluster (IC:11539) linked to multiple other cards with a history of fraudulent activity. This indicates a coordinated card-not-present fraud scheme using compromised card details.",
+    "subjects": [
+      "C07987-K2"
+    ],
+    "total_amount_usd": 99.92,
+    "activity_dates": [
+      "2016-12-01",
+      "2016-12-01"
+    ]
+  },
+  "stop_reason": "Fraud probability is >= 0.85 (0.95) and is supported by multiple independent evidence pieces (high risk score, link to a fraudulent device cluster).",
+  "tool_calls": 4,
+  "tokens": 1644,
+  "latency_s": 0.0
+}

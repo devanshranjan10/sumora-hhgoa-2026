@@ -1,0 +1,114 @@
+{
+  "case_id": "HHG-007",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3514948"
+    ],
+    "first_suspicious_txn_id": "3514948",
+    "connected_card_ids": [
+      "C09933-K1"
+    ],
+    "connected_device_profiles": [
+      "DP:SM-G900P Build/MMB29M|chrome 62.0 for android|1920x1080",
+      "DP:Windows|chrome 63.0|2560x1080",
+      "DP:Pixel 2 Build/OPM1.171019.011|chrome 63.0 for android|",
+      "DP:Windows|chrome 65.0|1440x900",
+      "DP:Z955A|chrome 66.0 for android|",
+      "DP:SM-G550T1 Build/MMB29K|chrome 62.0 for android|1280x720",
+      "DP:iOS Device|mobile safari 11.0|2732x2048",
+      "DP:rv:47.0|firefox 47.0|1600x900",
+      "DP:iOS Device|mobile safari generic|2048x1536",
+      "DP:Windows|chrome 66.0|1920x1080",
+      "DP:SAMSUNG-SM-G930A Build/NRD90M|chrome 63.0 for android|1920x1080",
+      "DP:SM-N920P Build/NRD90M|chrome 62.0 for android|"
+    ],
+    "connected_device_profiles": [],
+    "exposure_usd": 111.92,
+    "evidence": [
+      {
+        "claim": "A single transaction was flagged by a risk model with a high score of 0.87.",
+        "source": "document",
+        "ref": "case_id: HHG-007",
+        "entity_ids": [
+          "3514948"
+        ]
+      },
+      {
+        "claim": "The flagged transaction is a Card-Not-Present (online) purchase.",
+        "source": "graph",
+        "ref": "transaction: 3514948",
+        "entity_ids": [
+          "3514948"
+        ]
+      },
+      {
+        "claim": "The customer's card has a history of exclusively in-person transactions.",
+        "source": "graph",
+        "ref": "transactions",
+        "entity_ids": [
+          "C09933-K2"
+        ]
+      },
+      {
+        "claim": "The transaction originated from a device profile not previously associated with the customer.",
+        "source": "graph",
+        "ref": "device_ids",
+        "entity_ids": [
+          "DP:SM-G900P Build/MMB29M|chrome 62.0 for android|1920x1080"
+        ]
+      },
+      {
+        "claim": "The transaction is linked to a cluster of other transactions from the same device profile, indicating a shared point of compromise.",
+        "source": "graph",
+        "ref": "edges",
+        "entity_ids": [
+          "IC:15868"
+        ]
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "A single online transaction for $111.92 was flagged by a risk model. The transaction is anomalous for the customer, who has only made in-person purchases. The transaction originated from a new device profile and is linked to a cluster of other transactions, indicating a shared point of compromise. The evidence strongly suggests a fraudulent card-not-present transaction.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "what_changed": "none: decision unchanged after evidence review"
+  },
+  "sar": {
+    "file": true,
+    "reason": "SAR is required for confirmed fraud that connects to a shared device profile (R6).",
+    "narrative": "On 2016-12-05, a single fraudulent online transaction for $111.92 was identified on card C09933-K2. The transaction was flagged by a risk model and originated from a device profile not previously associated with the customer. The device profile is linked to a cluster of other transactions, indicating a shared point of compromise. The activity is consistent with card-not-present fraud.",
+    "subjects": [
+      "C09933-K2"
+    ],
+    "total_amount_usd": 111.92,
+    "activity_dates": [
+      "2016-12-05",
+      "2016-12-05"
+    ]
+  },
+  "stop_reason": "Fraud probability (0.95) is >= 0.85 and is supported by multiple independent evidence pieces (anomalous transaction type, new device, shared cluster).",
+  "tool_calls": 4,
+  "tokens": 1664,
+  "latency_s": 0.0
+}

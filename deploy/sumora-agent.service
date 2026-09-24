@@ -1,0 +1,21 @@
+[Unit]
+Description=Sumora live fraud investigation API
+After=network-online.target docker.service sumora-mcp.service
+Wants=network-online.target sumora-mcp.service
+
+[Service]
+Type=simple
+User=ranjansrivastav
+WorkingDirectory=/opt/sumora/current
+Environment=PYTHONPATH=/opt/sumora/current
+Environment=TG_HOST=127.0.0.1
+Environment=TG_PORT=9000
+Environment=SUMORA_TRACE_DIR=/opt/sumora/run/traces
+Environment=SUMORA_ANSWER_DIR=/opt/sumora/run/answers
+ExecStart=/opt/sumora/venv/bin/uvicorn service.app:app --host 127.0.0.1 --port 8000 --workers 1
+Restart=on-failure
+RestartSec=5
+MemoryMax=5G
+
+[Install]
+WantedBy=multi-user.target

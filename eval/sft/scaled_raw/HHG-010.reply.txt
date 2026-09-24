@@ -1,0 +1,127 @@
+{
+  "case_id": "HHG-010",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3506725"
+    ],
+    "first_suspicious_txn_id": "3506725",
+    "connected_card_ids": [
+      "C12961-K1",
+      "C04346-K1",
+      "C00659-K1",
+      "C10127-K1",
+      "C07105-K1",
+      "C00787-K1",
+      "C09141-K1",
+      "C09274-K1",
+      "C03817-K1",
+      "C04860-K1",
+      "C03036-K1",
+      "C04566-K1"
+    ],
+    "connected_device_profiles": [
+      "DP:MacOS|safari generic|1440x900",
+      "DP:MacOS|chrome 65.0|1280x800",
+      "DP:iOS Device|mobile safari 11.0|1334x750",
+      "DP:iOS Device|mobile safari 11.0|2436x1125",
+      "DP:Windows|edge 16.0|1366x768",
+      "DP:iOS Device|mobile safari 11.0|1136x640",
+      "DP:iOS Device|mobile safari generic|1334x750",
+      "DP:iOS Device|mobile safari generic|1136x640",
+      "DP:MacOS|chrome 66.0|1600x900",
+      "DP:Windows|chrome 61.0|1920x1080",
+      "DP:Windows|chrome 63.0|1366x768"
+    ],
+    "exposure_usd": 1000.03,
+    "evidence": [
+      {
+        "claim": "A single transaction was flagged by a risk model with a high score of 0.90.",
+        "source": "graph",
+        "ref": "case_id: HHG-010",
+        "entity_ids": [
+          "3506725"
+        ]
+      },
+      {
+        "claim": "The flagged transaction is a large online purchase of $1,000.03.",
+        "source": "graph",
+        "ref": "transaction_id: 3506725",
+        "entity_ids": [
+          "3506725"
+        ]
+      },
+      {
+        "claim": "The transaction is linked to a cluster of other transactions on different cards, all originating from the same cluster profile (IC:16482).",
+        "source": "graph",
+        "ref": "cluster_id: IC:16482",
+        "entity_ids": [
+          "C12961-K1",
+          "C04346-K1",
+          "C00659-K1",
+          "C10127-K1",
+          "C07105-K1",
+          "C00787-K1",
+          "C09141-K1",
+          "C09274-K1",
+          "C03817-K1",
+          "C04860-K1",
+          "C03036-K1",
+          "C04566-K1"
+        ]
+      },
+      {
+        "claim": "The cluster profile is associated with multiple email domains, including 'hotmail.com', which is a common indicator of fraud.",
+        "source": "graph",
+        "ref": "cluster_id: IC:16482",
+        "entity_ids": [
+          "IC:16482"
+        ]
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "A single high-risk transaction for $1,000.03 was flagged. Investigation revealed the transaction is part of a larger, coordinated activity involving multiple cards and a shared cluster profile (IC:16482) linked to known fraud indicators like 'hotmail.com'. This strongly suggests a card-not-present fraud scheme.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "what_changed": "none: decision unchanged after evidence review"
+  },
+  "sar": {
+    "file": true,
+    "reason": "SAR is required as fraud is strongly suspected and the activity connects to a shared device profile (cluster IC:16482) linked to other cards' fraud (R6).",
+    "narrative": "On 2016-12-02, a single transaction for $1,000.03 was flagged on card C10434-K1. Investigation revealed the transaction is part of a larger, coordinated activity involving multiple cards and a shared cluster profile (IC:16482). This cluster profile is linked to several other cards and is associated with email domains like 'hotmail.com', indicating a card-not-present fraud scheme. The total exposure from this activity is estimated at $1,000.03.",
+    "subjects": [
+      "C10434-K1",
+      "IC:16482"
+    ],
+    "total_amount_usd": 1000.03,
+    "activity_dates": [
+      "2016-12-02",
+      "2016-12-21"
+    ]
+  },
+  "stop_reason": "Fraud probability (0.95) is >= 0.85 and is supported by multiple independent evidence pieces (high risk score, large transaction, shared cluster profile, and suspicious email domains).",
+  "tool_calls": 4,
+  "tokens": 1764,
+  "latency_s": 0.0
+}

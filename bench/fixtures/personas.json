@@ -1,0 +1,142 @@
+{
+  "HHG-001": {
+    "customer_validation": {
+      "confirmed_transaction": false,
+      "denies_transaction": true,
+      "response": "Customer states they did not make this purchase and still has the card"
+    }
+  },
+  "HHG-002": {
+    "customer_validation": {
+      "confirmed_transaction": false,
+      "denies_transaction": true,
+      "response": "Customer states they did not make this purchase and still has the card"
+    }
+  },
+  "HHG-003": {
+    "customer_validation": {
+      "confirmed_transaction": false,
+      "denies_transaction": true,
+      "response": "Customer states they did not make this purchase and still has the card"
+    }
+  },
+  "HHG-004": {
+    "customer_validation": {
+      "confirmed_transaction": true,
+      "denies_transaction": false,
+      "response": "Customer confirms the purchase was theirs"
+    }
+  },
+  "HHG-005": {
+    "customer_validation": {
+      "confirmed_transaction": false,
+      "denies_transaction": true,
+      "response": "Customer states they did not make this purchase and still has the card"
+    }
+  },
+  "HHG-006": {
+    "customer_validation": {
+      "confirmed_transaction": true,
+      "denies_transaction": false,
+      "response": "Customer confirms the purchase was theirs"
+    }
+  },
+  "HHG-007": {
+    "customer_validation": {
+      "confirmed_transaction": false,
+      "denies_transaction": true,
+      "response": "Customer states they did not make this purchase and still has the card"
+    }
+  },
+  "HHG-008": {
+    "customer_validation": {
+      "confirmed_transaction": false,
+      "denies_transaction": true,
+      "response": "Customer states they did not make this purchase and still has the card"
+    }
+  },
+  "HHG-009": {
+    "customer_validation": {
+      "confirmed_transaction": true,
+      "denies_transaction": false,
+      "response": "Customer confirms the purchase was theirs"
+    }
+  },
+  "HHG-010": {
+    "customer_validation": {
+      "confirmed_transaction": false,
+      "denies_transaction": true,
+      "response": "Customer states they did not make this purchase and still has the card"
+    }
+  },
+  "HHG-011": {
+    "customer_validation": {
+      "confirmed_transaction": false,
+      "denies_transaction": true,
+      "response": "Customer states they did not make this purchase and still has the card"
+    }
+  },
+  "HHG-012": {
+    "customer_validation": {
+      "confirmed_transaction": false,
+      "denies_transaction": true,
+      "response": "Customer states they did not make this purchase and still has the card"
+    }
+  },
+  "HHG-013": {
+    "customer_validation": {
+      "confirmed_transaction": false,
+      "denies_transaction": true,
+      "response": "Customer states they did not make this purchase and still has the card"
+    }
+  },
+  "HHG-014": {
+    "customer_validation": {
+      "confirmed_transaction": false,
+      "denies_transaction": true,
+      "response": "Customer states they did not make this purchase and still has the card"
+    }
+  },
+  "HHG-015": {
+    "customer_validation": {
+      "confirmed_transaction": false,
+      "denies_transaction": true,
+      "response": "Customer states they did not make this purchase and still has the card"
+    }
+  },
+  "HHG-016": {
+    "customer_validation": {
+      "confirmed_transaction": true,
+      "denies_transaction": false,
+      "response": "Customer confirms the purchase was theirs"
+    }
+  },
+  "HHG-017": {
+    "customer_validation": {
+      "confirmed_transaction": true,
+      "denies_transaction": false,
+      "response": "Customer confirms the purchase was theirs"
+    }
+  },
+  "HHG-018": {
+    "customer_validation": {
+      "confirmed_transaction": false,
+      "denies_transaction": true,
+      "response": "Customer states they did not make this purchase and still has the card"
+    }
+  },
+  "HHG-019": {
+    "customer_validation": {
+      "confirmed_transaction": false,
+      "denies_transaction": true,
+      "response": "Customer states they did not make this purchase and still has the card"
+    }
+  },
+  "HHG-020": {
+    "customer_validation": {
+      "confirmed_transaction": false,
+      "denies_transaction": true,
+      "response": "Customer states they did not make this purchase and still has the card"
+    }
+  }
+}

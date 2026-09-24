@@ -1,0 +1,152 @@
+{
+  "n_files": 20,
+  "n_valid": 0,
+  "verdicts": {
+    "legitimate": 6,
+    "fraud": 13
+  },
+  "sar_filed": 10,
+  "modal_collapse": false,
+  "results": [
+    {
+      "case_id": "HHG-001",
+      "valid": false,
+      "verdict": "legitimate",
+      "p": 0.1,
+      "reason": "sar fields must be blank when sar.file is false; exposure_usd must be 0 for a legitimate verdict"
+    },
+    {
+      "case_id": "HHG-002",
+      "valid": false,
+      "verdict": "fraud",
+      "p": 0.95,
+      "reason": "sar.file (True) disagrees with FILE_REPORT in final actions (False); what_changed must be 'nothing' when no evidence was requested"
+    },
+    {
+      "case_id": "HHG-003",
+      "valid": false,
+      "verdict": "fraud",
+      "p": 0.95,
+      "reason": "sar fields must be blank when sar.file is false; what_changed must be 'nothing' when no evidence was requested"
+    },
+    {
+      "case_id": "HHG-004",
+      "valid": false,
+      "verdict": "fraud",
+      "p": 0.95,
+      "reason": "'evidence_requests' is a required property; 'latency_s' is a required property"
+    },
+    {
+      "case_id": "HHG-005",
+      "valid": false,
+      "verdict": "legitimate",
+      "p": 0.1,
+      "reason": "what_changed must be 'nothing' when no evidence was requested"
+    },
+    {
+      "case_id": "HHG-006",
+      "valid": false,
+      "verdict": "fraud",
+      "p": 0.95,
+      "reason": "sar.file (True) disagrees with FILE_REPORT in final actions (False); what_changed must be 'nothing' when no evidence was requested"
+    },
+    {
+      "case_id": "HHG-007",
+      "valid": false,
+      "verdict": "fraud",
+      "p": 0.95,
+      "reason": "sar.file (True) disagrees with FILE_REPORT in final actions (False); what_changed must be 'nothing' when no evidence was requested"
+    },
+    {
+      "case_id": "HHG-008",
+      "valid": false,
+      "verdict": "fraud",
+      "p": 0.95,
+      "reason": "sar.file (True) disagrees with FILE_REPORT in final actions (False); what_changed must be 'nothing' when no evidence was requested"
+    },
+    {
+      "case_id": "HHG-009",
+      "valid": false,
+      "verdict": null,
+      "p": null,
+      "reason": "no parseable JSON"
+    },
+    {
+      "case_id": "HHG-010",
+      "valid": false,
+      "verdict": "fraud",
+      "p": 0.95,
+      "reason": "sar.file (True) disagrees with FILE_REPORT in final actions (False); what_changed must be 'nothing' when no evidence was requested"
+    },
+    {
+      "case_id": "HHG-011",
+      "valid": false,
+      "verdict": "fraud",
+      "p": 0.95,
+      "reason": "sar.file (True) disagrees with FILE_REPORT in final actions (False); what_changed must be 'nothing' when no evidence was requested"
+    },
+    {
+      "case_id": "HHG-012",
+      "valid": false,
+      "verdict": "legitimate",
+      "p": 0.1,
+      "reason": "what_changed must be 'nothing' when no evidence was requested; case.evidence[2].entity_ids: card id C05876-K1 not in dataset"
+    },
+    {
+      "case_id": "HHG-013",
+      "valid": false,
+      "verdict": "legitimate",
+      "p": 0.1,
+      "reason": "what_changed must be 'nothing' when no evidence was requested"
+    },
+    {
+      "case_id": "HHG-014",
+      "valid": false,
+      "verdict": "fraud",
+      "p": 0.95,
+      "reason": "sar.file (True) disagrees with FILE_REPORT in final actions (False); what_changed must be 'nothing' when no evidence was requested"
+    },
+    {
+      "case_id": "HHG-015",
+      "valid": false,
+      "verdict": "fraud",
+      "p": 0.95,
+      "reason": "sar.file (True) disagrees with FILE_REPORT in final actions (False); what_changed must be 'nothing' when no evidence was requested"
+    },
+    {
+      "case_id": "HHG-016",
+      "valid": false,
+      "verdict": "fraud",
+      "p": 0.95,
+      "reason": "sar.file (True) disagrees with FILE_REPORT in final actions (False); what_changed must be 'nothing' when no evidence was requested"
+    },
+    {
+      "case_id": "HHG-017",
+      "valid": false,
+      "verdict": "legitimate",
+      "p": 0.1,
+      "reason": "what_changed must be 'nothing' when no evidence was requested"
+    },
+    {
+      "case_id": "HHG-018",
+      "valid": false,
+      "verdict": "fraud",
+      "p": 0.95,
+      "reason": "sar fields must be blank when sar.file is false; what_changed must be 'nothing' when no evidence was requested"
+    },
+    {
+      "case_id": "HHG-019",
+      "valid": false,
+      "verdict": "fraud",
+      "p": 0.95,
+      "reason": "sar.file (True) disagrees with FILE_REPORT in final actions (False); what_changed must be 'nothing' when no evidence was requested"
+    },
+    {
+      "case_id": "HHG-020",
+      "valid": false,
+      "verdict": "legitimate",
+      "p": 0.1,
+      "reason": "exposure_usd must be 0 for a legitimate verdict; what_changed must be 'nothing' when no evidence was requested"
+    }
+  ]
+}

@@ -1,0 +1,149 @@
+{
+  "n_cases": 20,
+  "n_valid_json": 20,
+  "validity_rate": 1.0,
+  "gate_pass": true,
+  "verdicts": {},
+  "results": [
+    {
+      "case_id": "HHG-001",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-002",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-003",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-004",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-005",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-006",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-007",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-008",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-009",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-010",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-011",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-012",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-013",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-014",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-015",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-016",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-017",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-018",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-019",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    },
+    {
+      "case_id": "HHG-020",
+      "valid_json": true,
+      "verdict": null,
+      "p": null,
+      "reason": ""
+    }
+  ]
+}

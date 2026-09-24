@@ -1,0 +1,96 @@
+{
+  "case_id": "HHG-014",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3478561",
+      "3457521",
+      "3486816"
+    ],
+    "first_suspicious_txn_id": "3457521",
+    "connected_card_ids": [
+      "C03676-K1",
+      "C04108-K1"
+    ],
+    "connected_device_profiles": [
+      "DP:Windows|edge 16.0|1920x1080",
+      "DP:SM-G935F Build/NRD90M|chrome 62.0 for android|1920x1080"
+    ],
+    "exposure_usd": 590.0,
+    "evidence": [
+      {
+        "claim": "A cluster of transactions from multiple cards originated from the same unusual device profile.",
+        "source": "graph",
+        "ref": "edges",
+        "entity_ids": [
+          "C03676-K1",
+          "C04108-K1",
+          "DP:Windows|edge 16.0|1920x1080"
+        ]
+      },
+      {
+        "claim": "The suspicious transactions are all online, while the customer's typical spending is in-person.",
+        "source": "graph",
+        "ref": "transactions",
+        "entity_ids": [
+          "3478561",
+          "3457521",
+          "3486816"
+        ]
+      },
+      {
+        "claim": "The activity fits a pattern of coordinated fraud originating from a shared device profile.",
+        "source": "graph",
+        "ref": "edges",
+        "entity_ids": [
+          "IC:22791"
+        ]
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "A cluster of online transactions from multiple cards originated from the same unusual device profile, a strong indicator of coordinated fraud. The activity is inconsistent with the customer's established in-person spending pattern. The total exposure from the confirmed fraudulent transactions is $590.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "confirmed fraud; block card"
+      }
+    ],
+    "what_changed": "none: decision unchanged after evidence review"
+  },
+  "sar": {
+    "file": true,
+    "reason": "SAR policy: Fraud is confirmed and connects to a shared device profile.",
+    "narrative": "On or around November 14, 2016, a series of fraudulent online transactions were made using card C13487-K1 and other customer cards. The transactions originated from a shared device profile (DP:Windows|edge 16.0|1920x1080) and were directed to various online merchants. The activity is inconsistent with the legitimate spending patterns of the affected customers. The total exposure from the confirmed fraudulent transactions is $590.",
+    "subjects": [
+      "C13487-K1",
+      "C03676-K1",
+      "C04108-K1"
+    ],
+    "total_amount_usd": 590.0,
+    "activity_dates": [
+      "2016-11-14",
+      "2016-11-25"
+    ]
+  },
+  "stop_reason": "Fraud probability >= 0.85 (0.95) supported by >=2 independent evidence pieces (shared device profile, atypical spending pattern).",
+  "tool_calls": 4,
+  "tokens": 1664,
+  "latency_s": 0.0
+}

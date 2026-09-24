@@ -1,0 +1,89 @@
+{
+  "case": {
+    "affected_txn_ids": [],
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "evidence": [
+      {
+        "claim": "Flagged transaction T3464869 ($599.94, online)",
+        "entity_ids": [
+          "T3464869"
+        ],
+        "ref": "q_evidence_pack",
+        "source": "graph"
+      },
+      {
+        "claim": "Device/structure links prior case(s) CC-3528, CC-0615, CC-1313",
+        "entity_ids": [
+          "CC-3528",
+          "CC-0615",
+          "CC-1313"
+        ],
+        "ref": "q_case_structural_similarity",
+        "source": "graph"
+      },
+      {
+        "claim": "Policy check (data/HHGOA_IEEE/README.md#Fraud Policy): # Fraud Policy\n\nVersion 1.0. This is the policy your agent operates under. Action names and approval routes in your case files must use the exact identifiers be",
+        "entity_ids": [],
+        "ref": "graphrag.retrieve",
+        "source": "document"
+      }
+    ],
+    "exposure_usd": 0.0,
+    "first_suspicious_txn_id": "",
+    "fraud_probability": 0.06,
+    "graph_case_id": "HHG-015",
+    "pattern": "card_not_present_new_device",
+    "pattern_description": "",
+    "similar_prior_cases": [
+      "CC-3528",
+      "CC-0615",
+      "CC-1313"
+    ],
+    "status": "closed_legitimate",
+    "summary": "Trigger: risk score on transaction T3464869 ($599.94, card C03042-K1). Findings: p=0.06 (90% CI 0.05-0.10), 3 evidence items. Pattern: card_not_present_new_device. Stopping: confident p:legitimate p 0.06 classes 2. Actions: DECLINE_TRANSACTION -> CLOSE_NO_FRAUD; approval in-line. Memory: 3 closed prior case(s) cited.",
+    "verdict": "legitimate",
+    "written_to_graph": true
+  },
+  "case_id": "HHG-015",
+  "evidence_requests": [],
+  "latency_s": 14.164,
+  "next_best_actions": {
+    "final": [
+      {
+        "action": "DECLINE_TRANSACTION",
+        "reason": "decision gate selected DECLINE_TRANSACTION as the minimum expected-cost action",
+        "route": "L1"
+      },
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "reason": "evidence supports the legitimate hypothesis",
+        "route": "auto"
+      }
+    ],
+    "initial": [
+      {
+        "action": "DECLINE_TRANSACTION",
+        "reason": "decision gate selected DECLINE_TRANSACTION as the minimum expected-cost action",
+        "route": "L1"
+      },
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "reason": "evidence supports the legitimate hypothesis",
+        "route": "auto"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "activity_dates": [],
+    "file": false,
+    "narrative": "",
+    "reason": "3a: filing threshold not met; case only, no report",
+    "subjects": [],
+    "total_amount_usd": 0
+  },
+  "stop_reason": "confident_p:legitimate_p_0.06_classes_2",
+  "tokens": 1800,
+  "tool_calls": 9
+}

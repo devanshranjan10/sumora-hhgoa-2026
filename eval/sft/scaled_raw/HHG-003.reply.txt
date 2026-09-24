@@ -1,0 +1,75 @@
+{
+  "case_id": "HHG-003",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3530164"
+    ],
+    "first_suspicious_txn_id": "3530164",
+    "connected_card_ids": [
+      "C08623-K1"
+    ],
+    "connected_device_profiles": [
+      "DP:Windows|firefox 57.0|1366x768"
+    ],
+    "connected_device_profiles": [],
+    "exposure_usd": 49.0,
+    "evidence": [
+      {
+        "claim": "Customer explicitly denied making the transaction.",
+        "source": "customer",
+        "ref": "Customer C08623 message",
+        "entity_ids": [
+          "C08623",
+          "3530164"
+        ]
+      },
+      {
+        "claim": "The transaction was a single, uncorroborated event with no other suspicious indicators.",
+        "source": "graph",
+        "ref": "EVIDENCE DIGEST",
+        "entity_ids": [
+          "3530164"
+        ]
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "The customer reported a $49.00 transaction they did not authorize. The transaction is a single, isolated event with no corroborating evidence of fraud, but the customer's denial is definitive. The verdict is fraud based on the customer's report.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Block card due to confirmed fraud."
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Block card due to confirmed fraud."
+      }
+    ],
+    "what_changed": "none: decision unchanged after evidence review"
+  },
+  "sar": {
+    "file": false,
+    "reason": "SAR not required. Fraud is confirmed, but exposure is < $1,000 and the case does not connect to a shared device or other known fraud.",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 49.0,
+    "activity_dates": []
+  },
+  "stop_reason": "A verification response from the customer has settled the case, confirming fraud.",
+  "tool_calls": 4,
+  "tokens": 1304,
+  "latency_s": 0.0
+}
